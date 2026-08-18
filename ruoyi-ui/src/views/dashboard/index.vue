@@ -60,7 +60,6 @@
         <el-card shadow="never" class="workspace-card">
           <div slot="header" class="card-header">
             <span>待审单据</span>
-            <el-button type="text" @click="handleGo('/erp/order/pending')">查看全部</el-button>
           </div>
           <div v-loading="todoLoading">
             <div v-for="item in todoList" :key="item.id" class="todo-item">
@@ -185,6 +184,7 @@ import PieChart from './PieChart'
 import BarChart from './BarChart'
 import { getPanelData, getLineChartData, getBarChartData, getPieChartData, getRaddarChartData, getTodoList } from '@/api/dashboard'
 import { listNoticeTop } from '@/api/system/notice'
+import { listStock } from '@/api/erp/stock'
 
 const defaultLineData = {
   sale: {
@@ -283,11 +283,18 @@ export default {
       })
     },
     loadStock() {
-      this.stockWarnings = [
-        { materialId: 1, materialName: '原材料-钢板', type: '不足', stock: 120, safeStock: 500 },
-        { materialId: 2, materialName: '半成品-电机组件', type: '不足', stock: 30, safeStock: 200 },
-        { materialId: 3, materialName: '成品-产品B', type: '积压', stock: 860, safeStock: 300 }
-      ]
+      listStock({ pageNum: 1, pageSize: 100 }).then(res => {
+        const list = res.rows || []
+        const warnings = []
+        list.forEach(item => {
+          if (item.quantity < item.safeStock) {
+            warnings.push({ materialId: item.materialId, materialName: item.materialName, type: '不足', stock: item.quantity, safeStock: item.safeStock })
+          } else if (item.quantity > item.safeStock * 3) {
+            warnings.push({ materialId: item.materialId, materialName: item.materialName, type: '积压', stock: item.quantity, safeStock: item.safeStock })
+          }
+        })
+        this.stockWarnings = warnings.slice(0, 5)
+      })
     },
     loadNotice() {
       listNoticeTop().then(res => {
