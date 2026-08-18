@@ -1,8 +1,8 @@
 {
-  "name": "ruoyi",
+  "name": "erp-ui",
   "version": "3.6.8",
-  "description": "若依管理系统",
-  "author": "若依",
+  "description": "ERP企业管理平台",
+  "author": "erp-demo",
   "license": "MIT",
   "scripts": {
     "dev": "vue-cli-service serve",

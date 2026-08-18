@@ -47,7 +47,7 @@ module.exports = {
   /**
    * 是否显示动态标题
    */
-  dynamicTitle: false,
+  dynamicTitle: true,
 
   /**
    * 是否显示底部版权
@@ -57,5 +57,5 @@ module.exports = {
   /**
    * 底部版权文本内容
    */
-  footerContent: 'Copyright © 2018-2026 RuoYi. All Rights Reserved.'
+  footerContent: 'Copyright © 2026 ERP企业管理平台. All Rights Reserved.'
 }
