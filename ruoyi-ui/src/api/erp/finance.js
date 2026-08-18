@@ -102,6 +102,44 @@ export function addPayment(data) {
   paymentDb.unshift(data)
   return Promise.resolve({})
 }
+// 单据流程动作（草稿→待审核→审核通过/驳回→完成）
+// 真实接口：
+// export function submitPayment(paymentId) {
+//   return request({ url: '/erp/finance/payment/submit', method: 'put', params: { paymentId } })
+// }
+// export function approvePayment(paymentId) {
+//   return request({ url: '/erp/finance/payment/approve', method: 'put', params: { paymentId } })
+// }
+// export function rejectPayment(paymentId) {
+//   return request({ url: '/erp/finance/payment/reject', method: 'put', params: { paymentId } })
+// }
+// export function completePayment(paymentId) {
+//   return request({ url: '/erp/finance/payment/complete', method: 'put', params: { paymentId } })
+// }
+export function submitPayment(paymentId) {
+  setBillStatus(paymentDb, paymentId, '1')
+  return Promise.resolve({})
+}
+export function approvePayment(paymentId) {
+  setBillStatus(paymentDb, paymentId, '2')
+  return Promise.resolve({})
+}
+export function rejectPayment(paymentId) {
+  setBillStatus(paymentDb, paymentId, '3')
+  return Promise.resolve({})
+}
+export function completePayment(paymentId) {
+  setBillStatus(paymentDb, paymentId, '4')
+  return Promise.resolve({})
+}
+
+// 通用工具：更新单据状态
+function setBillStatus(db, id, status) {
+  const idx = db.findIndex(item => item.paymentId !== undefined && item.paymentId === Number(id))
+  if (idx !== -1) {
+    db[idx].status = status
+  }
+}
 
 // 通用工具：格式化当前时间
 function formatNow() {
