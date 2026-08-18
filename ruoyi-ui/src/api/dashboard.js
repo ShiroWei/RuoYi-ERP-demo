@@ -1,4 +1,9 @@
 import request from '@/utils/request'
+import { listPurchaseOrder, listPurchaseInbound, listPurchaseReturn } from '@/api/erp/purchase'
+import { listSaleOrder, listSaleOutbound, listSaleReturn } from '@/api/erp/sale'
+import { listStockRecord, listStockCheck, listStockTransfer } from '@/api/erp/stock'
+import { listPayment } from '@/api/erp/finance'
+import { listWorkOrder } from '@/api/erp/production'
 
 // 首页工作台统计卡片数据
 // 当前返回 mock 演示数据；接入真实接口后，改为 request 调用即可：
@@ -17,19 +22,46 @@ export function getPanelData() {
   })
 }
 
-// 待审单据列表（工作台左侧）
+// 待审单据列表（工作台左侧）：从各业务模块 mock 汇总 status=待审核 的单据，并可点击直达
 // 真实接口：
 // export function getTodoList() {
 //   return request({ url: '/erp/order/pending', method: 'get' })
 // }
 export function getTodoList() {
-  return Promise.resolve([
-    { id: 'PO20260816001', billType: '采购订单', title: '原材料采购订单（钢材）', supplier: '华宇金属材料有限公司', amount: 128000, createTime: '2026-08-16 09:12', priority: '高', status: '待审核' },
-    { id: 'SO20260816002', billType: '销售订单', title: '设备销售订单（华东客户）', customer: '华东机械制造有限公司', amount: 86500, createTime: '2026-08-16 08:45', priority: '中', status: '待审核' },
-    { id: 'ST20260815003', billType: '库存调拨', title: '调拨单（总仓 → 华东仓）', fromWarehouse: '总仓', amount: 0, createTime: '2026-08-15 16:30', priority: '中', status: '待审核' },
-    { id: 'MO20260815004', billType: '生产工单', title: '生产工单（产品A-2026批次）', product: '产品A', amount: 0, createTime: '2026-08-15 14:20', priority: '高', status: '待审核' },
-    { id: 'PO20260814005', billType: '采购订单', title: '电子元器件采购', supplier: '深圳联创电子有限公司', amount: 56200, createTime: '2026-08-14 10:20', priority: '低', status: '审核中' }
-  ])
+  const page = { pageNum: 1, pageSize: 100 }
+  return Promise.all([
+    listPurchaseOrder(page), listPurchaseInbound(page), listPurchaseReturn(page),
+    listSaleOrder(page), listSaleOutbound(page), listSaleReturn(page),
+    listStockRecord(page), listStockCheck(page), listStockTransfer(page),
+    listPayment(page), listWorkOrder(page)
+  ]).then(([po, pi, pr, so, soo, sr, srec, sc, st, pay, wo]) => {
+    const todo = []
+    const push = (rows, billType, titleFn, amountFn, timeFn, path) => {
+      rows.filter(item => String(item.status) === '1').forEach(item => {
+        todo.push({
+          id: titleFn(item),
+          billType,
+          title: titleFn(item),
+          amount: amountFn(item),
+          createTime: timeFn(item),
+          status: '待审核',
+          path
+        })
+      })
+    }
+    push(po.rows, '采购订单', i => i.orderNo + '（' + (i.supplierName || '') + '）', i => i.totalAmount, i => i.createTime, '/erp/purchase/order')
+    push(pi.rows, '采购入库', i => i.inboundNo + '（' + (i.supplierName || '') + '）', i => i.totalAmount, i => i.createTime, '/erp/purchase/inbound')
+    push(pr.rows, '采购退货', i => i.returnNo, i => i.totalAmount, i => i.createTime, '/erp/purchase/return')
+    push(so.rows, '销售订单', i => i.orderNo + '（' + (i.customerName || '') + '）', i => i.totalAmount, i => i.createTime, '/erp/sale/order')
+    push(soo.rows, '销售出库', i => i.outboundNo, i => i.totalAmount, i => i.createTime, '/erp/sale/outbound')
+    push(sr.rows, '销售退货', i => i.returnNo, i => i.totalAmount, i => i.createTime, '/erp/sale/return')
+    push(srec.rows, '出入库记录', i => i.recordNo, i => i.quantity, i => i.recordDate, '/erp/stock/record')
+    push(sc.rows, '库存盘点', i => i.checkNo + '（' + (i.warehouseName || '') + '）', () => 0, i => i.createTime || i.checkDate, '/erp/stock/check')
+    push(st.rows, '库存调拨', i => i.transferNo, i => i.quantity, i => i.createTime || i.transferDate, '/erp/stock/transfer')
+    push(pay.rows, '收付款单', i => i.paymentNo + '（' + (i.partnerName || '') + '）', i => i.amount, i => i.createTime || i.paymentDate, '/erp/finance/payment')
+    push(wo.rows, '生产工单', i => i.orderNo + '（' + (i.productName || '') + '）', i => i.quantity, i => i.createTime || i.planStart, '/erp/production/order')
+    return todo
+  })
 }
 
 // 首页折线图数据（近7日销售/采购趋势）

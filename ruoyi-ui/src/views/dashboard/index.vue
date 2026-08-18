@@ -62,8 +62,7 @@
             <span>待审单据</span>
           </div>
           <div v-loading="todoLoading">
-            <div v-for="item in todoList" :key="item.id" class="todo-item">
-              <el-tag size="mini" :type="priorityType(item.priority)">{{ item.priority }}</el-tag>
+            <div v-for="item in todoList" :key="item.id" class="todo-item" @click="handleGo(item.path)">
               <span class="todo-bill">{{ item.billType }}</span>
               <span class="todo-title">{{ item.title }}</span>
               <span class="todo-time">{{ item.createTime }}</span>
