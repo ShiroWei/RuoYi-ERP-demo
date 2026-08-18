@@ -110,6 +110,36 @@ export function delPurchaseOrder(orderId) {
   purchaseOrderDb = purchaseOrderDb.filter(item => item.orderId !== Number(orderId))
   return Promise.resolve({})
 }
+// 单据流程动作（草稿→待审核→审核通过/驳回→完成）
+// 真实接口：
+// export function submitPurchaseOrder(orderId) {
+//   return request({ url: '/erp/purchase/order/submit', method: 'put', params: { orderId } })
+// }
+// export function approvePurchaseOrder(orderId) {
+//   return request({ url: '/erp/purchase/order/approve', method: 'put', params: { orderId } })
+// }
+// export function rejectPurchaseOrder(orderId) {
+//   return request({ url: '/erp/purchase/order/reject', method: 'put', params: { orderId } })
+// }
+// export function completePurchaseOrder(orderId) {
+//   return request({ url: '/erp/purchase/order/complete', method: 'put', params: { orderId } })
+// }
+export function submitPurchaseOrder(orderId) {
+  setBillStatus(purchaseOrderDb, orderId, '1')
+  return Promise.resolve({})
+}
+export function approvePurchaseOrder(orderId) {
+  setBillStatus(purchaseOrderDb, orderId, '2')
+  return Promise.resolve({})
+}
+export function rejectPurchaseOrder(orderId) {
+  setBillStatus(purchaseOrderDb, orderId, '3')
+  return Promise.resolve({})
+}
+export function completePurchaseOrder(orderId) {
+  setBillStatus(purchaseOrderDb, orderId, '4')
+  return Promise.resolve({})
+}
 
 // ------------------------------------------------------------
 // 二、采购入库单
@@ -202,6 +232,23 @@ export function delPurchaseInbound(inboundId) {
   purchaseInboundDb = purchaseInboundDb.filter(item => item.inboundId !== Number(inboundId))
   return Promise.resolve({})
 }
+// 单据流程动作
+export function submitPurchaseInbound(inboundId) {
+  setBillStatus(purchaseInboundDb, inboundId, '1')
+  return Promise.resolve({})
+}
+export function approvePurchaseInbound(inboundId) {
+  setBillStatus(purchaseInboundDb, inboundId, '2')
+  return Promise.resolve({})
+}
+export function rejectPurchaseInbound(inboundId) {
+  setBillStatus(purchaseInboundDb, inboundId, '3')
+  return Promise.resolve({})
+}
+export function completePurchaseInbound(inboundId) {
+  setBillStatus(purchaseInboundDb, inboundId, '4')
+  return Promise.resolve({})
+}
 
 // ------------------------------------------------------------
 // 三、采购退货单
@@ -285,6 +332,35 @@ export function updatePurchaseReturn(data) {
 export function delPurchaseReturn(returnId) {
   purchaseReturnDb = purchaseReturnDb.filter(item => item.returnId !== Number(returnId))
   return Promise.resolve({})
+}
+// 单据流程动作
+export function submitPurchaseReturn(returnId) {
+  setBillStatus(purchaseReturnDb, returnId, '1')
+  return Promise.resolve({})
+}
+export function approvePurchaseReturn(returnId) {
+  setBillStatus(purchaseReturnDb, returnId, '2')
+  return Promise.resolve({})
+}
+export function rejectPurchaseReturn(returnId) {
+  setBillStatus(purchaseReturnDb, returnId, '3')
+  return Promise.resolve({})
+}
+export function completePurchaseReturn(returnId) {
+  setBillStatus(purchaseReturnDb, returnId, '4')
+  return Promise.resolve({})
+}
+
+// 通用工具：更新单据状态
+function setBillStatus(db, id, status) {
+  const idx = db.findIndex(item => {
+    return (item.orderId !== undefined && item.orderId === Number(id)) ||
+      (item.inboundId !== undefined && item.inboundId === Number(id)) ||
+      (item.returnId !== undefined && item.returnId === Number(id))
+  })
+  if (idx !== -1) {
+    db[idx].status = status
+  }
 }
 
 // 通用工具：格式化当前时间
