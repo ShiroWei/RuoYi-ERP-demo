@@ -61,6 +61,50 @@
         </template>
       </el-table-column>
       <el-table-column label="备注" align="center" prop="remark" :show-overflow-tooltip="true" />
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+        <template slot-scope="scope">
+          <el-button
+            v-if="scope.row.status === '0'"
+            size="mini"
+            type="text"
+            icon="el-icon-promotion"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:stockRecord:edit']"
+          >提交审核</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-check"
+            @click="handleApprove(scope.row)"
+            v-hasPermi="['erp:stockRecord:edit']"
+          >审核通过</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-close"
+            @click="handleReject(scope.row)"
+            v-hasPermi="['erp:stockRecord:edit']"
+          >驳回</el-button>
+          <el-button
+            v-if="scope.row.status === '2'"
+            size="mini"
+            type="text"
+            icon="el-icon-finished"
+            @click="handleComplete(scope.row)"
+            v-hasPermi="['erp:stockRecord:edit']"
+          >完成</el-button>
+          <el-button
+            v-if="scope.row.status === '3'"
+            size="mini"
+            type="text"
+            icon="el-icon-refresh-left"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:stockRecord:edit']"
+          >重新提交</el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <pagination
@@ -132,7 +176,7 @@
 </template>
 
 <script>
-import { listStockRecord, addStockRecord } from "@/api/erp/stock"
+import { listStockRecord, addStockRecord, submitStockRecord, approveStockRecord, rejectStockRecord, completeStockRecord } from "@/api/erp/stock"
 
 export default {
   name: "StockRecord",
@@ -258,6 +302,42 @@ export default {
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
+    },
+    /** 提交审核 */
+    handleSubmit(row) {
+      this.$modal.confirm('确认提交单据「' + row.recordNo + '」审核？').then(function() {
+        return submitStockRecord(row.recordId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("提交成功")
+      }).catch(() => {})
+    },
+    /** 审核通过 */
+    handleApprove(row) {
+      this.$modal.confirm('确认审核通过单据「' + row.recordNo + '」？').then(function() {
+        return approveStockRecord(row.recordId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("审核通过")
+      }).catch(() => {})
+    },
+    /** 驳回 */
+    handleReject(row) {
+      this.$modal.confirm('确认驳回单据「' + row.recordNo + '」？').then(function() {
+        return rejectStockRecord(row.recordId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已驳回")
+      }).catch(() => {})
+    },
+    /** 完成 */
+    handleComplete(row) {
+      this.$modal.confirm('确认完成单据「' + row.recordNo + '」？').then(function() {
+        return completeStockRecord(row.recordId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已完成")
+      }).catch(() => {})
     },
     /** 重置按钮操作 */
     resetQuery() {

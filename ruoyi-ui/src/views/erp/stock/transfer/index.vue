@@ -55,6 +55,50 @@
         </template>
       </el-table-column>
       <el-table-column label="备注" align="center" prop="remark" :show-overflow-tooltip="true" />
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+        <template slot-scope="scope">
+          <el-button
+            v-if="scope.row.status === '0'"
+            size="mini"
+            type="text"
+            icon="el-icon-promotion"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:stockTransfer:edit']"
+          >提交审核</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-check"
+            @click="handleApprove(scope.row)"
+            v-hasPermi="['erp:stockTransfer:edit']"
+          >审核通过</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-close"
+            @click="handleReject(scope.row)"
+            v-hasPermi="['erp:stockTransfer:edit']"
+          >驳回</el-button>
+          <el-button
+            v-if="scope.row.status === '2'"
+            size="mini"
+            type="text"
+            icon="el-icon-finished"
+            @click="handleComplete(scope.row)"
+            v-hasPermi="['erp:stockTransfer:edit']"
+          >完成</el-button>
+          <el-button
+            v-if="scope.row.status === '3'"
+            size="mini"
+            type="text"
+            icon="el-icon-refresh-left"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:stockTransfer:edit']"
+          >重新提交</el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <pagination
@@ -128,7 +172,7 @@
 </template>
 
 <script>
-import { listStockTransfer, addStockTransfer } from "@/api/erp/stock"
+import { listStockTransfer, addStockTransfer, submitStockTransfer, approveStockTransfer, rejectStockTransfer, completeStockTransfer } from "@/api/erp/stock"
 
 export default {
   name: "StockTransfer",
@@ -246,6 +290,42 @@ export default {
     resetQuery() {
       this.resetForm("queryForm")
       this.handleQuery()
+    },
+    /** 提交审核 */
+    handleSubmit(row) {
+      this.$modal.confirm('确认提交单据「' + row.transferNo + '」审核？').then(function() {
+        return submitStockTransfer(row.transferId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("提交成功")
+      }).catch(() => {})
+    },
+    /** 审核通过 */
+    handleApprove(row) {
+      this.$modal.confirm('确认审核通过单据「' + row.transferNo + '」？').then(function() {
+        return approveStockTransfer(row.transferId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("审核通过")
+      }).catch(() => {})
+    },
+    /** 驳回 */
+    handleReject(row) {
+      this.$modal.confirm('确认驳回单据「' + row.transferNo + '」？').then(function() {
+        return rejectStockTransfer(row.transferId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已驳回")
+      }).catch(() => {})
+    },
+    /** 完成 */
+    handleComplete(row) {
+      this.$modal.confirm('确认完成单据「' + row.transferNo + '」？').then(function() {
+        return completeStockTransfer(row.transferId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已完成")
+      }).catch(() => {})
     },
     /** 新增按钮操作 */
     handleAdd() {

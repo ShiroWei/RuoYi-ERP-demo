@@ -76,6 +76,23 @@ export function addStockRecord(data) {
   stockRecordDb.unshift(data)
   return Promise.resolve({})
 }
+// 单据流程动作（草稿→待审核→审核通过/驳回→完成）
+export function submitStockRecord(recordId) {
+  setBillStatus(stockRecordDb, recordId, '1')
+  return Promise.resolve({})
+}
+export function approveStockRecord(recordId) {
+  setBillStatus(stockRecordDb, recordId, '2')
+  return Promise.resolve({})
+}
+export function rejectStockRecord(recordId) {
+  setBillStatus(stockRecordDb, recordId, '3')
+  return Promise.resolve({})
+}
+export function completeStockRecord(recordId) {
+  setBillStatus(stockRecordDb, recordId, '4')
+  return Promise.resolve({})
+}
 
 // ------------------------------------------------------------
 // 三、库存盘点
@@ -154,6 +171,23 @@ export function delStockCheck(checkId) {
   stockCheckDb = stockCheckDb.filter(item => item.checkId !== Number(checkId))
   return Promise.resolve({})
 }
+// 单据流程动作（盘点单并入统一审核流）
+export function submitStockCheck(checkId) {
+  setBillStatus(stockCheckDb, checkId, '1')
+  return Promise.resolve({})
+}
+export function approveStockCheck(checkId) {
+  setBillStatus(stockCheckDb, checkId, '2')
+  return Promise.resolve({})
+}
+export function rejectStockCheck(checkId) {
+  setBillStatus(stockCheckDb, checkId, '3')
+  return Promise.resolve({})
+}
+export function completeStockCheck(checkId) {
+  setBillStatus(stockCheckDb, checkId, '4')
+  return Promise.resolve({})
+}
 
 // ------------------------------------------------------------
 // 四、库存调拨
@@ -187,6 +221,35 @@ export function addStockTransfer(data) {
   data.transferNo = 'TF20260818' + String(data.transferId).padStart(3, '0')
   stockTransferDb.unshift(data)
   return Promise.resolve({})
+}
+// 单据流程动作
+export function submitStockTransfer(transferId) {
+  setBillStatus(stockTransferDb, transferId, '1')
+  return Promise.resolve({})
+}
+export function approveStockTransfer(transferId) {
+  setBillStatus(stockTransferDb, transferId, '2')
+  return Promise.resolve({})
+}
+export function rejectStockTransfer(transferId) {
+  setBillStatus(stockTransferDb, transferId, '3')
+  return Promise.resolve({})
+}
+export function completeStockTransfer(transferId) {
+  setBillStatus(stockTransferDb, transferId, '4')
+  return Promise.resolve({})
+}
+
+// 通用工具：更新单据状态
+function setBillStatus(db, id, status) {
+  const idx = db.findIndex(item => {
+    return (item.recordId !== undefined && item.recordId === Number(id)) ||
+      (item.checkId !== undefined && item.checkId === Number(id)) ||
+      (item.transferId !== undefined && item.transferId === Number(id))
+  })
+  if (idx !== -1) {
+    db[idx].status = status
+  }
 }
 
 // 通用工具：格式化当前时间

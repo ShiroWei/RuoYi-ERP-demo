@@ -95,6 +95,47 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
+            v-if="scope.row.status === '0'"
+            size="mini"
+            type="text"
+            icon="el-icon-promotion"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:stockCheck:edit']"
+          >提交审核</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-check"
+            @click="handleApprove(scope.row)"
+            v-hasPermi="['erp:stockCheck:edit']"
+          >审核通过</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-close"
+            @click="handleReject(scope.row)"
+            v-hasPermi="['erp:stockCheck:edit']"
+          >驳回</el-button>
+          <el-button
+            v-if="scope.row.status === '2'"
+            size="mini"
+            type="text"
+            icon="el-icon-finished"
+            @click="handleComplete(scope.row)"
+            v-hasPermi="['erp:stockCheck:edit']"
+          >完成</el-button>
+          <el-button
+            v-if="scope.row.status === '3'"
+            size="mini"
+            type="text"
+            icon="el-icon-refresh-left"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:stockCheck:edit']"
+          >重新提交</el-button>
+          <el-button
+            v-if="scope.row.status === '0'"
             size="mini"
             type="text"
             icon="el-icon-edit"
@@ -102,6 +143,7 @@
             v-hasPermi="['erp:stockCheck:edit']"
           >修改</el-button>
           <el-button
+            v-if="scope.row.status === '0'"
             size="mini"
             type="text"
             icon="el-icon-delete"
@@ -209,7 +251,7 @@
 </template>
 
 <script>
-import { listStockCheck, getStockCheck, delStockCheck, addStockCheck, updateStockCheck } from "@/api/erp/stock"
+import { listStockCheck, getStockCheck, delStockCheck, addStockCheck, updateStockCheck, submitStockCheck, approveStockCheck, rejectStockCheck, completeStockCheck } from "@/api/erp/stock"
 
 export default {
   name: "StockCheck",
@@ -234,10 +276,13 @@ export default {
       title: "",
       // 是否显示弹出层
       open: false,
-      // 盘点状态字典（接入真实接口后使用 sys_dict 的 erp_check_status）
+      // 盘点状态字典（统一单据流程：草稿-待审核-审核通过/驳回-完成）
       checkStatusOptions: [
-        { value: '0', label: '未盘点', tagType: 'info' },
-        { value: '1', label: '已盘点', tagType: 'success' }
+        { value: '0', label: '草稿', tagType: 'info' },
+        { value: '1', label: '待审核', tagType: 'warning' },
+        { value: '2', label: '审核通过', tagType: 'primary' },
+        { value: '3', label: '已驳回', tagType: 'danger' },
+        { value: '4', label: '已完成', tagType: 'success' }
       ],
       // 仓库选项（mock）
       warehouseOptions: [
@@ -345,6 +390,42 @@ export default {
         this.open = true
         this.title = "修改盘点单"
       })
+    },
+    /** 提交审核 */
+    handleSubmit(row) {
+      this.$modal.confirm('确认提交单据「' + row.checkNo + '」审核？').then(function() {
+        return submitStockCheck(row.checkId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("提交成功")
+      }).catch(() => {})
+    },
+    /** 审核通过 */
+    handleApprove(row) {
+      this.$modal.confirm('确认审核通过单据「' + row.checkNo + '」？').then(function() {
+        return approveStockCheck(row.checkId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("审核通过")
+      }).catch(() => {})
+    },
+    /** 驳回 */
+    handleReject(row) {
+      this.$modal.confirm('确认驳回单据「' + row.checkNo + '」？').then(function() {
+        return rejectStockCheck(row.checkId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已驳回")
+      }).catch(() => {})
+    },
+    /** 完成 */
+    handleComplete(row) {
+      this.$modal.confirm('确认完成单据「' + row.checkNo + '」？').then(function() {
+        return completeStockCheck(row.checkId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已完成")
+      }).catch(() => {})
     },
     /** 选择物料回填行数据 */
     materialChange(row) {
