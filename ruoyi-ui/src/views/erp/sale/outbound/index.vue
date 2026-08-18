@@ -95,6 +95,46 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
+            v-if="scope.row.status === '0'"
+            size="mini"
+            type="text"
+            icon="el-icon-promotion"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:saleOutbound:edit']"
+          >提交审核</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-check"
+            @click="handleApprove(scope.row)"
+            v-hasPermi="['erp:saleOutbound:edit']"
+          >审核通过</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-close"
+            @click="handleReject(scope.row)"
+            v-hasPermi="['erp:saleOutbound:edit']"
+          >驳回</el-button>
+          <el-button
+            v-if="scope.row.status === '2'"
+            size="mini"
+            type="text"
+            icon="el-icon-finished"
+            @click="handleComplete(scope.row)"
+            v-hasPermi="['erp:saleOutbound:edit']"
+          >完成</el-button>
+          <el-button
+            v-if="scope.row.status === '3'"
+            size="mini"
+            type="text"
+            icon="el-icon-refresh-left"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:saleOutbound:edit']"
+          >重新提交</el-button>
+          <el-button
             size="mini"
             type="text"
             icon="el-icon-view"
@@ -102,6 +142,7 @@
             v-hasPermi="['erp:saleOutbound:query']"
           >明细</el-button>
           <el-button
+            v-if="scope.row.status === '0'"
             size="mini"
             type="text"
             icon="el-icon-edit"
@@ -109,6 +150,7 @@
             v-hasPermi="['erp:saleOutbound:edit']"
           >修改</el-button>
           <el-button
+            v-if="scope.row.status === '0'"
             size="mini"
             type="text"
             icon="el-icon-delete"
@@ -240,7 +282,7 @@
 </template>
 
 <script>
-import { listSaleOutbound, getSaleOutbound, delSaleOutbound, addSaleOutbound, updateSaleOutbound } from "@/api/erp/sale"
+import { listSaleOutbound, getSaleOutbound, delSaleOutbound, addSaleOutbound, updateSaleOutbound, submitSaleOutbound, approveSaleOutbound, rejectSaleOutbound, completeSaleOutbound } from "@/api/erp/sale"
 
 export default {
   name: "SaleOutbound",
@@ -399,6 +441,42 @@ export default {
     handleDetail(row) {
       this.detail = row
       this.openDetail = true
+    },
+    /** 提交审核 */
+    handleSubmit(row) {
+      this.$modal.confirm('确认提交单据「' + row.outboundNo + '」审核？').then(function() {
+        return submitSaleOutbound(row.outboundId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("提交成功")
+      }).catch(() => {})
+    },
+    /** 审核通过 */
+    handleApprove(row) {
+      this.$modal.confirm('确认审核通过单据「' + row.outboundNo + '」？').then(function() {
+        return approveSaleOutbound(row.outboundId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("审核通过")
+      }).catch(() => {})
+    },
+    /** 驳回 */
+    handleReject(row) {
+      this.$modal.confirm('确认驳回单据「' + row.outboundNo + '」？').then(function() {
+        return rejectSaleOutbound(row.outboundId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已驳回")
+      }).catch(() => {})
+    },
+    /** 完成 */
+    handleComplete(row) {
+      this.$modal.confirm('确认完成单据「' + row.outboundNo + '」？').then(function() {
+        return completeSaleOutbound(row.outboundId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已完成")
+      }).catch(() => {})
     },
     /** 选择物料回填行数据 */
     materialChange(row) {

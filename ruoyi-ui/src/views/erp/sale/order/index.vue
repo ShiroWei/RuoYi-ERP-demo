@@ -93,6 +93,46 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
+            v-if="scope.row.status === '0'"
+            size="mini"
+            type="text"
+            icon="el-icon-promotion"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:saleOrder:edit']"
+          >提交审核</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-check"
+            @click="handleApprove(scope.row)"
+            v-hasPermi="['erp:saleOrder:edit']"
+          >审核通过</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-close"
+            @click="handleReject(scope.row)"
+            v-hasPermi="['erp:saleOrder:edit']"
+          >驳回</el-button>
+          <el-button
+            v-if="scope.row.status === '2'"
+            size="mini"
+            type="text"
+            icon="el-icon-finished"
+            @click="handleComplete(scope.row)"
+            v-hasPermi="['erp:saleOrder:edit']"
+          >完成</el-button>
+          <el-button
+            v-if="scope.row.status === '3'"
+            size="mini"
+            type="text"
+            icon="el-icon-refresh-left"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:saleOrder:edit']"
+          >重新提交</el-button>
+          <el-button
             size="mini"
             type="text"
             icon="el-icon-view"
@@ -100,6 +140,7 @@
             v-hasPermi="['erp:saleOrder:query']"
           >明细</el-button>
           <el-button
+            v-if="scope.row.status === '0'"
             size="mini"
             type="text"
             icon="el-icon-edit"
@@ -107,6 +148,7 @@
             v-hasPermi="['erp:saleOrder:edit']"
           >修改</el-button>
           <el-button
+            v-if="scope.row.status === '0'"
             size="mini"
             type="text"
             icon="el-icon-delete"
@@ -231,7 +273,7 @@
 </template>
 
 <script>
-import { listSaleOrder, getSaleOrder, delSaleOrder, addSaleOrder, updateSaleOrder } from "@/api/erp/sale"
+import { listSaleOrder, getSaleOrder, delSaleOrder, addSaleOrder, updateSaleOrder, submitSaleOrder, approveSaleOrder, rejectSaleOrder, completeSaleOrder } from "@/api/erp/sale"
 
 export default {
   name: "SaleOrder",
@@ -378,6 +420,42 @@ export default {
     handleDetail(row) {
       this.detail = row
       this.openDetail = true
+    },
+    /** 提交审核 */
+    handleSubmit(row) {
+      this.$modal.confirm('确认提交单据「' + row.orderNo + '」审核？').then(function() {
+        return submitSaleOrder(row.orderId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("提交成功")
+      }).catch(() => {})
+    },
+    /** 审核通过 */
+    handleApprove(row) {
+      this.$modal.confirm('确认审核通过单据「' + row.orderNo + '」？').then(function() {
+        return approveSaleOrder(row.orderId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("审核通过")
+      }).catch(() => {})
+    },
+    /** 驳回 */
+    handleReject(row) {
+      this.$modal.confirm('确认驳回单据「' + row.orderNo + '」？').then(function() {
+        return rejectSaleOrder(row.orderId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已驳回")
+      }).catch(() => {})
+    },
+    /** 完成 */
+    handleComplete(row) {
+      this.$modal.confirm('确认完成单据「' + row.orderNo + '」？').then(function() {
+        return completeSaleOrder(row.orderId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已完成")
+      }).catch(() => {})
     },
     /** 选择客户 */
     customerChange(name) {

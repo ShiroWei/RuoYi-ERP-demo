@@ -110,6 +110,36 @@ export function delSaleOrder(orderId) {
   saleOrderDb = saleOrderDb.filter(item => item.orderId !== Number(orderId))
   return Promise.resolve({})
 }
+// 单据流程动作（草稿→待审核→审核通过/驳回→完成）
+// 真实接口：
+// export function submitSaleOrder(orderId) {
+//   return request({ url: '/erp/sale/order/submit', method: 'put', params: { orderId } })
+// }
+// export function approveSaleOrder(orderId) {
+//   return request({ url: '/erp/sale/order/approve', method: 'put', params: { orderId } })
+// }
+// export function rejectSaleOrder(orderId) {
+//   return request({ url: '/erp/sale/order/reject', method: 'put', params: { orderId } })
+// }
+// export function completeSaleOrder(orderId) {
+//   return request({ url: '/erp/sale/order/complete', method: 'put', params: { orderId } })
+// }
+export function submitSaleOrder(orderId) {
+  setBillStatus(saleOrderDb, orderId, '1')
+  return Promise.resolve({})
+}
+export function approveSaleOrder(orderId) {
+  setBillStatus(saleOrderDb, orderId, '2')
+  return Promise.resolve({})
+}
+export function rejectSaleOrder(orderId) {
+  setBillStatus(saleOrderDb, orderId, '3')
+  return Promise.resolve({})
+}
+export function completeSaleOrder(orderId) {
+  setBillStatus(saleOrderDb, orderId, '4')
+  return Promise.resolve({})
+}
 
 // ------------------------------------------------------------
 // 二、销售出库单
@@ -202,6 +232,23 @@ export function delSaleOutbound(outboundId) {
   saleOutboundDb = saleOutboundDb.filter(item => item.outboundId !== Number(outboundId))
   return Promise.resolve({})
 }
+// 单据流程动作
+export function submitSaleOutbound(outboundId) {
+  setBillStatus(saleOutboundDb, outboundId, '1')
+  return Promise.resolve({})
+}
+export function approveSaleOutbound(outboundId) {
+  setBillStatus(saleOutboundDb, outboundId, '2')
+  return Promise.resolve({})
+}
+export function rejectSaleOutbound(outboundId) {
+  setBillStatus(saleOutboundDb, outboundId, '3')
+  return Promise.resolve({})
+}
+export function completeSaleOutbound(outboundId) {
+  setBillStatus(saleOutboundDb, outboundId, '4')
+  return Promise.resolve({})
+}
 
 // ------------------------------------------------------------
 // 三、销售退货单
@@ -285,6 +332,35 @@ export function updateSaleReturn(data) {
 export function delSaleReturn(returnId) {
   saleReturnDb = saleReturnDb.filter(item => item.returnId !== Number(returnId))
   return Promise.resolve({})
+}
+// 单据流程动作
+export function submitSaleReturn(returnId) {
+  setBillStatus(saleReturnDb, returnId, '1')
+  return Promise.resolve({})
+}
+export function approveSaleReturn(returnId) {
+  setBillStatus(saleReturnDb, returnId, '2')
+  return Promise.resolve({})
+}
+export function rejectSaleReturn(returnId) {
+  setBillStatus(saleReturnDb, returnId, '3')
+  return Promise.resolve({})
+}
+export function completeSaleReturn(returnId) {
+  setBillStatus(saleReturnDb, returnId, '4')
+  return Promise.resolve({})
+}
+
+// 通用工具：更新单据状态
+function setBillStatus(db, id, status) {
+  const idx = db.findIndex(item => {
+    return (item.orderId !== undefined && item.orderId === Number(id)) ||
+      (item.outboundId !== undefined && item.outboundId === Number(id)) ||
+      (item.returnId !== undefined && item.returnId === Number(id))
+  })
+  if (idx !== -1) {
+    db[idx].status = status
+  }
 }
 
 // 通用工具：格式化当前时间
