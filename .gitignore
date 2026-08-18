@@ -41,6 +41,9 @@ nbdist/
 *.xml.versionsBackup
 *.swp
 
+# Local runtime artifacts
+/scripts/backup/
+
 !*/build/*.java
 !*/build/*.html
 !*/build/*.xml

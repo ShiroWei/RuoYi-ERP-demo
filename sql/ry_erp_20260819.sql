@@ -19,3 +19,10 @@ insert into sys_menu values('2063', '库存报表', '2060', '3', 'stock', 'erp/r
 
 -- 5. 利润报表
 insert into sys_menu values('2064', '利润报表', '2060', '4', 'profit', 'erp/report/profit/index', '', '', 1, 0, 'C', '0', '0', 'erp:report:profit:list',   'pie-chart', 'admin', sysdate(), '', null, '利润分析报表菜单');
+
+-- 6. 角色授权（普通角色 role_id=2；admin 用户 isAdmin 自动可见全部菜单）
+insert into sys_role_menu values ('2', '2060');
+insert into sys_role_menu values ('2', '2061');
+insert into sys_role_menu values ('2', '2062');
+insert into sys_role_menu values ('2', '2063');
+insert into sys_role_menu values ('2', '2064');
