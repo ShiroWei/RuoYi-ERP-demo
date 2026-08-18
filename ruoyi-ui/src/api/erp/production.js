@@ -176,6 +176,44 @@ export function delWorkOrder(orderId) {
   workOrderDb = workOrderDb.filter(item => item.orderId !== Number(orderId))
   return Promise.resolve({})
 }
+// 单据流程动作（工单并入统一审核流：草稿→待审核→审核通过/驳回→完成）
+// 真实接口：
+// export function submitWorkOrder(orderId) {
+//   return request({ url: '/erp/production/order/submit', method: 'put', params: { orderId } })
+// }
+// export function approveWorkOrder(orderId) {
+//   return request({ url: '/erp/production/order/approve', method: 'put', params: { orderId } })
+// }
+// export function rejectWorkOrder(orderId) {
+//   return request({ url: '/erp/production/order/reject', method: 'put', params: { orderId } })
+// }
+// export function completeWorkOrder(orderId) {
+//   return request({ url: '/erp/production/order/complete', method: 'put', params: { orderId } })
+// }
+export function submitWorkOrder(orderId) {
+  setBillStatus(workOrderDb, orderId, '1')
+  return Promise.resolve({})
+}
+export function approveWorkOrder(orderId) {
+  setBillStatus(workOrderDb, orderId, '2')
+  return Promise.resolve({})
+}
+export function rejectWorkOrder(orderId) {
+  setBillStatus(workOrderDb, orderId, '3')
+  return Promise.resolve({})
+}
+export function completeWorkOrder(orderId) {
+  setBillStatus(workOrderDb, orderId, '4')
+  return Promise.resolve({})
+}
+
+// 通用工具：更新工单状态
+function setBillStatus(db, id, status) {
+  const idx = db.findIndex(item => item.orderId !== undefined && item.orderId === Number(id))
+  if (idx !== -1) {
+    db[idx].status = status
+  }
+}
 
 // 通用工具：格式化当前时间
 function formatNow() {

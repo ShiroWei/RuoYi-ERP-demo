@@ -100,6 +100,47 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
+            v-if="scope.row.status === '0'"
+            size="mini"
+            type="text"
+            icon="el-icon-promotion"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:workOrder:edit']"
+          >提交审核</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-check"
+            @click="handleApprove(scope.row)"
+            v-hasPermi="['erp:workOrder:edit']"
+          >审核通过</el-button>
+          <el-button
+            v-if="scope.row.status === '1'"
+            size="mini"
+            type="text"
+            icon="el-icon-close"
+            @click="handleReject(scope.row)"
+            v-hasPermi="['erp:workOrder:edit']"
+          >驳回</el-button>
+          <el-button
+            v-if="scope.row.status === '2'"
+            size="mini"
+            type="text"
+            icon="el-icon-finished"
+            @click="handleComplete(scope.row)"
+            v-hasPermi="['erp:workOrder:edit']"
+          >完成</el-button>
+          <el-button
+            v-if="scope.row.status === '3'"
+            size="mini"
+            type="text"
+            icon="el-icon-refresh-left"
+            @click="handleSubmit(scope.row)"
+            v-hasPermi="['erp:workOrder:edit']"
+          >重新提交</el-button>
+          <el-button
+            v-if="scope.row.status === '0'"
             size="mini"
             type="text"
             icon="el-icon-edit"
@@ -107,6 +148,7 @@
             v-hasPermi="['erp:workOrder:edit']"
           >修改</el-button>
           <el-button
+            v-if="scope.row.status === '0'"
             size="mini"
             type="text"
             icon="el-icon-delete"
@@ -225,7 +267,7 @@
 </template>
 
 <script>
-import { listWorkOrder, getWorkOrder, delWorkOrder, addWorkOrder, updateWorkOrder } from "@/api/erp/production"
+import { listWorkOrder, getWorkOrder, delWorkOrder, addWorkOrder, updateWorkOrder, submitWorkOrder, approveWorkOrder, rejectWorkOrder, completeWorkOrder } from "@/api/erp/production"
 
 export default {
   name: "ProductionOrder",
@@ -250,12 +292,13 @@ export default {
       title: "",
       // 是否显示弹出层
       open: false,
-      // 生产状态字典（接入真实接口后使用 sys_dict 的 erp_production_status）
+      // 工单状态字典（统一单据流程：草稿-待审核-审核通过/驳回-完成）
       productionStatusOptions: [
-        { value: '0', label: '未开始', tagType: 'info' },
-        { value: '1', label: '生产中', tagType: 'warning' },
-        { value: '2', label: '已完工', tagType: 'success' },
-        { value: '3', label: '已关闭', tagType: 'danger' }
+        { value: '0', label: '草稿', tagType: 'info' },
+        { value: '1', label: '待审核', tagType: 'warning' },
+        { value: '2', label: '审核通过', tagType: 'primary' },
+        { value: '3', label: '已驳回', tagType: 'danger' },
+        { value: '4', label: '已完成', tagType: 'success' }
       ],
       // 优先级字典（接入真实接口后使用 sys_dict 的 erp_priority）
       priorityOptions: [
@@ -358,6 +401,42 @@ export default {
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
+    },
+    /** 提交审核 */
+    handleSubmit(row) {
+      this.$modal.confirm('确认提交工单「' + row.orderNo + '」审核？').then(function() {
+        return submitWorkOrder(row.orderId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("提交成功")
+      }).catch(() => {})
+    },
+    /** 审核通过 */
+    handleApprove(row) {
+      this.$modal.confirm('确认审核通过工单「' + row.orderNo + '」？').then(function() {
+        return approveWorkOrder(row.orderId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("审核通过")
+      }).catch(() => {})
+    },
+    /** 驳回 */
+    handleReject(row) {
+      this.$modal.confirm('确认驳回工单「' + row.orderNo + '」？').then(function() {
+        return rejectWorkOrder(row.orderId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已驳回")
+      }).catch(() => {})
+    },
+    /** 完成 */
+    handleComplete(row) {
+      this.$modal.confirm('确认完成工单「' + row.orderNo + '」？').then(function() {
+        return completeWorkOrder(row.orderId)
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已完成")
+      }).catch(() => {})
     },
     /** 重置按钮操作 */
     resetQuery() {
