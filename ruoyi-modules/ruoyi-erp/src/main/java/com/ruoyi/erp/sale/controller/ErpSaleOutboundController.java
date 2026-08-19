@@ -23,7 +23,7 @@ import com.ruoyi.erp.sale.service.IErpSaleOutboundService;
  * @author erp
  */
 @RestController
-@RequestMapping("/sale/Outbound")
+@RequestMapping("/sale/outbound")
 public class ErpSaleOutboundController extends BaseController
 {
     @Autowired

@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.ruoyi.erp.sale.mapper.ErpSaleoutboundMapper">
+<mapper namespace="com.ruoyi.erp.sale.mapper.ErpSaleOutboundMapper">
 
-    <resultMap type="ErpSaleoutbound" id="ErpSaleoutboundResult">
+    <resultMap type="ErpSaleOutbound" id="ErpSaleOutboundResult">
         <result property="outboundId"     column="outbound_id"     />
         <result property="outboundNo"     column="outbound_no"     />
         <result property="orderId"       column="order_id"       />
@@ -23,7 +23,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="updateTime"    column="update_time"    />
     </resultMap>
 
-    <sql id="selectErpSaleoutboundVo">
+    <sql id="selectErpSaleOutboundVo">
         select pi.outbound_id, pi.outbound_no, pi.order_id, po.order_no, pi.customer_id,
                su.customer_name, pi.warehouse_id, wh.warehouse_name, pi.outbound_date,
                pi.total_amount, pi.status, pi.remark, pi.create_by, pi.create_time,
@@ -34,8 +34,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         left join erp_warehouse wh on wh.warehouse_id = pi.warehouse_id
     </sql>
 
-    <select id="selectErpSaleoutboundList" parameterType="ErpSaleoutbound" resultMap="ErpSaleoutboundResult">
-        <include refid="selectErpSaleoutboundVo"/>
+    <select id="selectErpSaleOutboundList" parameterType="ErpSaleOutbound" resultMap="ErpSaleOutboundResult">
+        <include refid="selectErpSaleOutboundVo"/>
         <where>
             <if test="outboundNo != null and outboundNo != ''"> and pi.outbound_no like concat('%', #{outboundNo}, '%')</if>
             <if test="customerName != null and customerName != ''"> and su.customer_name like concat('%', #{customerName}, '%')</if>
@@ -44,12 +44,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by pi.outbound_id desc
     </select>
 
-    <select id="selectErpSaleoutboundById" parameterType="Long" resultMap="ErpSaleoutboundResult">
-        <include refid="selectErpSaleoutboundVo"/>
+    <select id="selectErpSaleOutboundById" parameterType="Long" resultMap="ErpSaleOutboundResult">
+        <include refid="selectErpSaleOutboundVo"/>
         where pi.outbound_id = #{outboundId}
     </select>
 
-    <insert id="insertErpSaleoutbound" parameterType="ErpSaleoutbound" useGeneratedKeys="true" keyProperty="outboundId">
+    <insert id="insertErpSaleOutbound" parameterType="ErpSaleOutbound" useGeneratedKeys="true" keyProperty="outboundId">
         insert into erp_sale_outbound
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="outboundNo != null">outbound_no,</if>
@@ -77,7 +77,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </trim>
     </insert>
 
-    <update id="updateErpSaleoutbound" parameterType="ErpSaleoutbound">
+    <update id="updateErpSaleOutbound" parameterType="ErpSaleOutbound">
         update erp_sale_outbound
         <trim prefix="SET" suffixOverrides=",">
             <if test="outboundNo != null">outbound_no = #{outboundNo},</if>
@@ -94,7 +94,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where outbound_id = #{outboundId}
     </update>
 
-    <delete id="deleteErpSaleoutboundById" parameterType="Long">
+    <delete id="deleteErpSaleOutboundById" parameterType="Long">
         delete from erp_sale_outbound where outbound_id = #{outboundId}
     </delete>
 </mapper>
