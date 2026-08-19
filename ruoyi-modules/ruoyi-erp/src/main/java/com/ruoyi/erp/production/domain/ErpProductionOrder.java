@@ -3,6 +3,7 @@ package com.ruoyi.erp.production.domain;
 import java.util.Date;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.core.annotation.Excel;
 import com.ruoyi.common.core.web.domain.BaseEntity;
 
@@ -43,14 +44,17 @@ public class ErpProductionOrder extends BaseEntity
 
     /** 下达日期 */
     @Excel(name = "下达日期", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private Date orderDate;
 
     /** 计划开工日期 */
     @Excel(name = "计划开工日期", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private Date planStartDate;
 
     /** 计划完工日期 */
     @Excel(name = "计划完工日期", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private Date planEndDate;
 
     /** 状态（0未开始 1生产中 2已完工 3已关闭） */

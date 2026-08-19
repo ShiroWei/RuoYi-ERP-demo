@@ -3,6 +3,7 @@ package com.ruoyi.erp.stock.domain;
 import java.util.Date;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.core.annotation.Excel;
 import com.ruoyi.common.core.web.domain.BaseEntity;
 
@@ -50,6 +51,7 @@ public class ErpStockRecord extends BaseEntity
 
     /** 发生日期 */
     @Excel(name = "发生日期", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private Date recordDate;
 
     /** 物料编码（关联查询） */

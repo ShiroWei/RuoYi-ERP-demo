@@ -3,6 +3,7 @@ package com.ruoyi.erp.finance.domain;
 import java.util.Date;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.core.annotation.Excel;
 import com.ruoyi.common.core.web.domain.BaseEntity;
 
@@ -43,6 +44,7 @@ public class ErpPayment extends BaseEntity
 
     /** 收付款日期 */
     @Excel(name = "收付款日期", width = 30, dateFormat = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private Date paymentDate;
 
     /** 单据状态（0草稿 1待审核 2审核通过 3已驳回 4已完成） */
