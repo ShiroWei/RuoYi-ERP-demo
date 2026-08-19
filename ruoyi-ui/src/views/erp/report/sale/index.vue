@@ -59,7 +59,7 @@ export default {
   methods: {
     getList() {
       getSaleReportData(this.queryParams).then(res => {
-        this.report = res
+        this.report = res.data
         this.loading = false
       })
     }

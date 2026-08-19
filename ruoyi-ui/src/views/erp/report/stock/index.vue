@@ -76,7 +76,7 @@ export default {
   methods: {
     getList() {
       getStockReportData(this.queryParams).then(res => {
-        this.report = res
+        this.report = res.data
         this.loading = false
       })
     }

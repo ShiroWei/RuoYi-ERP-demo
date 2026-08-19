@@ -17,7 +17,7 @@ const pendingPath = {
 // 待审单据列表（来自真实待办统计）
 export function getTodoList() {
   return getPendingCounts().then(res => {
-    const items = (res && res.items) || []
+    const items = (res && res.data && res.data.items) || []
     return items.map(item => ({
       id: item.name,
       billType: item.name,
@@ -38,7 +38,7 @@ const valueOf = (summary, index) => {
 
 // 首页统计卡片
 export function getPanelData() {
-  const pendingPromise = getPendingCounts().then(res => (res && res.items) || [])
+  const pendingPromise = getPendingCounts().then(res => (res && res.data && res.data.items) || [])
   const salePromise = getSaleReportData()
   const purchasePromise = getPurchaseReportData()
   const stockPromise = listStock({ pageNum: 1, pageSize: 1000 })
@@ -51,8 +51,8 @@ export function getPanelData() {
         purchaseCount = Number(item.count || 0)
       }
     })
-    const saleAmount = valueOf(sale.summary, 0)
-    const todayPurchase = valueOf(purchase.summary, 0)
+    const saleAmount = valueOf(sale.data.summary, 0)
+    const todayPurchase = valueOf(purchase.data.summary, 0)
     const stockWarning = (stock.rows || []).filter(item => Number(item.quantity) < Number(item.safeStock)).length
     return {
       todoCount,
@@ -68,8 +68,8 @@ export function getPanelData() {
 // 近7日销售/采购趋势
 export function getLineChartData() {
   return Promise.all([getSaleReportData(), getPurchaseReportData()]).then(([sale, purchase]) => {
-    const saleAmounts = ((sale.trend && sale.trend.amounts) || []).map(v => Math.round(Number(v) / 10000 * 100) / 100)
-    const purchaseAmounts = ((purchase.trend && purchase.trend.amounts) || []).map(v => Math.round(Number(v) / 10000 * 100) / 100)
+    const saleAmounts = ((sale.data.trend && sale.data.trend.amounts) || []).map(v => Math.round(Number(v) / 10000 * 100) / 100)
+    const purchaseAmounts = ((purchase.data.trend && purchase.data.trend.amounts) || []).map(v => Math.round(Number(v) / 10000 * 100) / 100)
     return {
       expectedData: saleAmounts,
       actualData: purchaseAmounts
@@ -80,7 +80,7 @@ export function getLineChartData() {
 // 近7日出入库量
 export function getBarChartData() {
   return getStockReportData().then(res => {
-    const trend = (res && res.inOutTrend) || {}
+    const trend = (res && res.data && res.data.inOutTrend) || {}
     return {
       pageA: (trend.in || []).map(v => Number(v)),
       pageB: (trend.out || []).map(v => Number(v)),
@@ -118,9 +118,9 @@ export function getPieChartData() {
 export function getRaddarChartData() {
   return Promise.all([getSaleReportData(), getPurchaseReportData(), getStockReportData(), getPendingCounts(), listSupplier({ pageNum: 1, pageSize: 1 }), listCustomer({ pageNum: 1, pageSize: 1 })]).then(([sale, purchase, stock, pending, supplier, customer]) => {
     let pendingTotal = 0
-    ;(pending.items || []).forEach(i => { pendingTotal += Number(i.count || 0) })
-    const stockTotal = valueOf(stock.summary, 0)
-    const stockLow = valueOf(stock.summary, 2)
+    ;(pending.data.items || []).forEach(i => { pendingTotal += Number(i.count || 0) })
+    const stockTotal = valueOf(stock.data.summary, 0)
+    const stockLow = valueOf(stock.data.summary, 2)
     const calc = (val, max) => Math.max(0, Math.min(100, Math.round((val || 0) / (max || 1) * 100)))
     const indicator = [
       { name: '库存周转', max: 100 },
@@ -132,8 +132,8 @@ export function getRaddarChartData() {
     ]
     const series = [
       calc(stockTotal, 200000),
-      calc(valueOf(sale.summary, 0), 500000),
-      calc(valueOf(purchase.summary, 0), 500000),
+      calc(valueOf(sale.data.summary, 0), 500000),
+      calc(valueOf(purchase.data.summary, 0), 500000),
       Math.max(20, 100 - pendingTotal * 10),
       Math.max(20, 100 - stockLow * 15),
       calc(customer.total, 50)
