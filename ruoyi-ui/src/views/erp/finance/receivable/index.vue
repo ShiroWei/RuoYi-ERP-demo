@@ -1,9 +1,9 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="88px">
-      <el-form-item label="单据编号" prop="receivableNo">
+      <el-form-item label="单据编号" prop="billNo">
         <el-input
-          v-model="queryParams.receivableNo"
+          v-model="queryParams.billNo"
           placeholder="请输入单据编号"
           clearable
           style="width: 180px"
@@ -19,8 +19,8 @@
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="结清状态" prop="settleStatus">
-        <el-select v-model="queryParams.settleStatus" placeholder="结清状态" clearable style="width: 160px">
+      <el-form-item label="结清状态" prop="status">
+        <el-select v-model="queryParams.status" placeholder="结清状态" clearable style="width: 160px">
           <el-option v-for="dict in settleStatusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
         </el-select>
       </el-form-item>
@@ -44,20 +44,19 @@
     </el-row>
 
     <el-table v-loading="loading" :data="receivableList">
-      <el-table-column label="单据编号" align="center" prop="receivableNo" width="180" />
+      <el-table-column label="单据编号" align="center" prop="billNo" width="180" />
       <el-table-column label="客户名称" align="center" prop="customerName" :show-overflow-tooltip="true" />
-      <el-table-column label="关联单据" align="center" prop="billNo" width="170" />
-      <el-table-column label="单据日期" align="center" prop="billDate" width="120" />
+      <el-table-column label="关联类型" align="center" prop="billType" width="100" />
       <el-table-column label="应收金额(元)" align="center" prop="amount" width="130" />
-      <el-table-column label="已收金额(元)" align="center" prop="paidAmount" width="130" />
-      <el-table-column label="未收金额(元)" align="center" prop="unpaidAmount" width="130">
+      <el-table-column label="已收金额(元)" align="center" prop="receivedAmount" width="130" />
+      <el-table-column label="未收金额(元)" align="center" prop="balance" width="130">
         <template slot-scope="scope">
-          <span :style="{ color: scope.row.unpaidAmount > 0 ? '#f56c6c' : '' }">{{ scope.row.unpaidAmount }}</span>
+          <span :style="{ color: scope.row.balance > 0 ? '#f56c6c' : '' }">{{ scope.row.balance }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="结清状态" align="center" prop="settleStatus" width="100">
+      <el-table-column label="结清状态" align="center" prop="status" width="100">
         <template slot-scope="scope">
-          <dict-tag :options="settleStatusOptions" :value="scope.row.settleStatus"/>
+          <dict-tag :options="settleStatusOptions" :value="scope.row.status"/>
         </template>
       </el-table-column>
       <el-table-column label="到期日" align="center" prop="dueDate" width="120" />
@@ -75,7 +74,7 @@
     <el-dialog title="登记收款" :visible.sync="open" width="520px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="客户名称" prop="partnerName">
-          <el-select v-model="form.partnerName" placeholder="请选择客户" filterable style="width: 100%">
+          <el-select v-model="form.partnerName" placeholder="请选择客户" filterable style="width: 100%" @change="partnerChange">
             <el-option v-for="item in customerOptions" :key="item.customerId" :label="item.customerName" :value="item.customerName" />
           </el-select>
         </el-form-item>
@@ -91,22 +90,9 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="收款方式" prop="method">
-              <el-select v-model="form.method" placeholder="收款方式" style="width: 100%">
-                <el-option label="银行转账" value="银行转账" />
-                <el-option label="银行承兑汇票" value="银行承兑汇票" />
-                <el-option label="现金" value="现金" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="关联应收单" prop="billNo">
-              <el-input v-model="form.billNo" placeholder="请输入应收单号" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <el-form-item label="关联应收单" prop="billNo">
+          <el-input v-model="form.billNo" placeholder="请输入应收单号" />
+        </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
         </el-form-item>
@@ -121,6 +107,7 @@
 
 <script>
 import { listReceivable, addPayment } from "@/api/erp/finance"
+import { listCustomer } from "@/api/erp/base"
 
 export default {
   name: "FinanceReceivable",
@@ -145,21 +132,15 @@ export default {
         { value: '1', label: '部分结清', tagType: 'warning' },
         { value: '2', label: '已结清', tagType: 'success' }
       ],
-      // 客户选项（mock）
-      customerOptions: [
-        { customerId: 1, customerName: '华东机械制造有限公司' },
-        { customerId: 2, customerName: '华南电子科技有限公司' },
-        { customerId: 3, customerName: '北方重工集团' },
-        { customerId: 4, customerName: '中联建设集团' },
-        { customerId: 5, customerName: '西南轨道交通有限公司' }
-      ],
+      // 客户选项（接入真实接口后动态加载）
+      customerOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
         pageSize: 10,
-        receivableNo: undefined,
+        billNo: undefined,
         customerName: undefined,
-        settleStatus: undefined
+        status: undefined
       },
       // 表单参数
       form: {},
@@ -173,17 +154,27 @@ export default {
         ],
         paymentDate: [
           { required: true, message: "收款日期不能为空", trigger: "change" }
-        ],
-        method: [
-          { required: true, message: "收款方式不能为空", trigger: "change" }
         ]
       }
     }
   },
   created() {
     this.getList()
+    this.loadCustomer()
   },
   methods: {
+    /** 加载客户下拉 */
+    loadCustomer() {
+      listCustomer({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.customerOptions = response.rows
+      })
+    },
+    /** 选择客户回填 id */
+    partnerChange() {
+      const c = this.customerOptions.find(item => item.customerName === this.form.partnerName)
+      this.form.partnerId = c ? c.customerId : undefined
+      this.form.partnerType = '客户'
+    },
     /** 查询应收列表 */
     getList() {
       this.loading = true
@@ -205,12 +196,12 @@ export default {
         paymentNo: undefined,
         paymentType: '1',
         partnerName: undefined,
+        partnerId: undefined,
+        partnerType: '客户',
         billNo: undefined,
         paymentDate: undefined,
         amount: undefined,
-        method: undefined,
         status: '0',
-        operator: undefined,
         remark: undefined
       }
       this.resetForm("form")
@@ -235,7 +226,6 @@ export default {
     submitForm: function() {
       this.$refs["form"].validate(valid => {
         if (valid) {
-          this.form.operator = '财务部-张会计'
           addPayment(this.form).then(() => {
             this.$modal.msgSuccess("登记成功")
             this.open = false

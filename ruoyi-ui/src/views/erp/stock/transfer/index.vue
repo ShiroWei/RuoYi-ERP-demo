@@ -43,18 +43,15 @@
       <el-table-column label="调拨单号" align="center" prop="transferNo" width="170" />
       <el-table-column label="物料编码" align="center" prop="materialCode" width="110" />
       <el-table-column label="物料名称" align="center" prop="materialName" :show-overflow-tooltip="true" />
-      <el-table-column label="单位" align="center" prop="unit" width="80" />
       <el-table-column label="调拨数量" align="center" prop="quantity" width="100" />
-      <el-table-column label="调出仓库" align="center" prop="fromWarehouse" :show-overflow-tooltip="true" />
-      <el-table-column label="调入仓库" align="center" prop="toWarehouse" :show-overflow-tooltip="true" />
+      <el-table-column label="调出仓库" align="center" prop="fromWarehouseName" :show-overflow-tooltip="true" />
+      <el-table-column label="调入仓库" align="center" prop="toWarehouseName" :show-overflow-tooltip="true" />
       <el-table-column label="调拨日期" align="center" prop="transferDate" width="120" />
-      <el-table-column label="经办人" align="center" prop="operator" width="90" />
       <el-table-column label="状态" align="center" prop="status" width="100">
         <template slot-scope="scope">
           <dict-tag :options="billStatusOptions" :value="scope.row.status"/>
         </template>
       </el-table-column>
-      <el-table-column label="备注" align="center" prop="remark" :show-overflow-tooltip="true" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
@@ -119,15 +116,15 @@
         </el-form-item>
         <el-row>
           <el-col :span="12">
-            <el-form-item label="调出仓库" prop="fromWarehouse">
-              <el-select v-model="form.fromWarehouse" placeholder="请选择仓库" style="width: 100%">
+            <el-form-item label="调出仓库" prop="fromWarehouseName">
+              <el-select v-model="form.fromWarehouseName" placeholder="请选择仓库" style="width: 100%" @change="fromWarehouseChange">
                 <el-option v-for="item in warehouseOptions" :key="item.warehouseId" :label="item.warehouseName" :value="item.warehouseName" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="调入仓库" prop="toWarehouse">
-              <el-select v-model="form.toWarehouse" placeholder="请选择仓库" style="width: 100%">
+            <el-form-item label="调入仓库" prop="toWarehouseName">
+              <el-select v-model="form.toWarehouseName" placeholder="请选择仓库" style="width: 100%" @change="toWarehouseChange">
                 <el-option v-for="item in warehouseOptions" :key="item.warehouseId" :label="item.warehouseName" :value="item.warehouseName" />
               </el-select>
             </el-form-item>
@@ -145,22 +142,10 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="经办人" prop="operator">
-              <el-input v-model="form.operator" placeholder="请输入经办人" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="状态" prop="status">
-              <el-select v-model="form.status" placeholder="单据状态" style="width: 100%">
-                <el-option v-for="dict in billStatusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="form.status" placeholder="单据状态" style="width: 100%">
+            <el-option v-for="dict in billStatusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
+          </el-select>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -173,6 +158,7 @@
 
 <script>
 import { listStockTransfer, addStockTransfer, submitStockTransfer, approveStockTransfer, rejectStockTransfer, completeStockTransfer } from "@/api/erp/stock"
+import { listWarehouse, listMaterial } from "@/api/erp/base"
 
 export default {
   name: "StockTransfer",
@@ -199,22 +185,10 @@ export default {
         { value: '3', label: '已驳回', tagType: 'danger' },
         { value: '4', label: '已完成', tagType: 'success' }
       ],
-      // 仓库选项（mock）
-      warehouseOptions: [
-        { warehouseId: 1, warehouseName: '总仓-原材料仓' },
-        { warehouseId: 2, warehouseName: '半成品仓' },
-        { warehouseId: 3, warehouseName: '成品仓' },
-        { warehouseId: 4, warehouseName: '华东周转仓' }
-      ],
-      // 物料选项（mock）
-      materialOptions: [
-        { materialId: 1, materialCode: 'M1001', materialName: '原材料-钢板' },
-        { materialId: 2, materialCode: 'M1002', materialName: '电子元器件' },
-        { materialId: 3, materialCode: 'M2001', materialName: '半成品-电机组件' },
-        { materialId: 4, materialCode: 'M3001', materialName: '成品-产品A' },
-        { materialId: 5, materialCode: 'M3002', materialName: '成品-产品B' },
-        { materialId: 6, materialCode: 'M4001', materialName: '包装纸箱' }
-      ],
+      // 仓库选项（接入真实接口后动态加载）
+      warehouseOptions: [],
+      // 物料选项（接入真实接口后动态加载）
+      materialOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -229,10 +203,10 @@ export default {
         materialId: [
           { required: true, message: "物料不能为空", trigger: "change" }
         ],
-        fromWarehouse: [
+        fromWarehouseName: [
           { required: true, message: "调出仓库不能为空", trigger: "change" }
         ],
-        toWarehouse: [
+        toWarehouseName: [
           { required: true, message: "调入仓库不能为空", trigger: "change" }
         ],
         quantity: [
@@ -246,8 +220,32 @@ export default {
   },
   created() {
     this.getList()
+    this.loadWarehouse()
+    this.loadMaterial()
   },
   methods: {
+    /** 加载仓库下拉 */
+    loadWarehouse() {
+      listWarehouse({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.warehouseOptions = response.rows
+      })
+    },
+    /** 加载物料下拉 */
+    loadMaterial() {
+      listMaterial({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.materialOptions = response.rows
+      })
+    },
+    /** 选择调出仓库回填 id */
+    fromWarehouseChange() {
+      const w = this.warehouseOptions.find(item => item.warehouseName === this.form.fromWarehouseName)
+      this.form.fromWarehouseId = w ? w.warehouseId : undefined
+    },
+    /** 选择调入仓库回填 id */
+    toWarehouseChange() {
+      const w = this.warehouseOptions.find(item => item.warehouseName === this.form.toWarehouseName)
+      this.form.toWarehouseId = w ? w.warehouseId : undefined
+    },
     /** 查询调拨单列表 */
     getList() {
       this.loading = true
@@ -270,14 +268,13 @@ export default {
         materialId: undefined,
         materialCode: undefined,
         materialName: undefined,
-        unit: undefined,
         quantity: undefined,
-        fromWarehouse: undefined,
-        toWarehouse: undefined,
+        fromWarehouseName: undefined,
+        fromWarehouseId: undefined,
+        toWarehouseName: undefined,
+        toWarehouseId: undefined,
         transferDate: undefined,
-        operator: undefined,
-        status: "0",
-        remark: undefined
+        status: "0"
       }
       this.resetForm("form")
     },
@@ -339,14 +336,13 @@ export default {
       if (m) {
         this.form.materialCode = m.materialCode
         this.form.materialName = m.materialName
-        this.form.unit = m.unit
       }
     },
     /** 提交按钮 */
     submitForm: function() {
       this.$refs["form"].validate(valid => {
         if (valid) {
-          if (this.form.fromWarehouse === this.form.toWarehouse) {
+          if (this.form.fromWarehouseName === this.form.toWarehouseName) {
             this.$modal.msgWarning("调出仓库与调入仓库不能相同")
             return
           }

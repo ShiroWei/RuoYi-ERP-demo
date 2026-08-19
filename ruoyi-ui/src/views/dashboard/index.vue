@@ -297,7 +297,7 @@ export default {
     },
     loadNotice() {
       listNoticeTop().then(res => {
-        const list = res.data || []
+        const list = res.rows || []
         this.notices = Array.isArray(list) ? list.slice(0, 3) : []
       })
     },

@@ -1,9 +1,9 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="78px">
-      <el-form-item label="BOM编码" prop="bomCode">
+      <el-form-item label="BOM编码" prop="bomNo">
         <el-input
-          v-model="queryParams.bomCode"
+          v-model="queryParams.bomNo"
           placeholder="请输入BOM编码"
           clearable
           style="width: 180px"
@@ -74,12 +74,10 @@
           </el-table>
         </template>
       </el-table-column>
-      <el-table-column label="BOM编码" align="center" prop="bomCode" width="170" />
+      <el-table-column label="BOM编码" align="center" prop="bomNo" width="170" />
       <el-table-column label="产成品编码" align="center" prop="productCode" width="110" />
       <el-table-column label="产成品名称" align="center" prop="productName" :show-overflow-tooltip="true" />
-      <el-table-column label="规格型号" align="center" prop="productSpec" :show-overflow-tooltip="true" />
       <el-table-column label="单位" align="center" prop="unit" width="70" />
-      <el-table-column label="版本" align="center" prop="version" width="90" />
       <el-table-column label="状态" align="center" prop="status" width="80">
         <template slot-scope="scope">
           <dict-tag :options="statusOptions" :value="scope.row.status"/>
@@ -129,11 +127,6 @@
               <el-select v-model="form.productId" placeholder="请选择产成品" filterable style="width: 100%" @change="productChange">
                 <el-option v-for="m in productOptions" :key="m.materialId" :label="m.materialName" :value="m.materialId" />
               </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="版本号" prop="version">
-              <el-input v-model="form.version" placeholder="请输入版本号" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -188,10 +181,9 @@
     <!-- BOM明细查看对话框 -->
     <el-dialog title="BOM明细" :visible.sync="openDetail" width="760px" append-to-body>
       <el-descriptions :column="2" border size="small">
-        <el-descriptions-item label="BOM编码">{{ detail.bomCode }}</el-descriptions-item>
+        <el-descriptions-item label="BOM编码">{{ detail.bomNo }}</el-descriptions-item>
         <el-descriptions-item label="产成品">{{ detail.productName }}</el-descriptions-item>
-        <el-descriptions-item label="规格型号">{{ detail.productSpec }}</el-descriptions-item>
-        <el-descriptions-item label="版本">{{ detail.version }}</el-descriptions-item>
+        <el-descriptions-item label="单位">{{ detail.unit }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <dict-tag :options="statusOptions" :value="detail.status"/>
         </el-descriptions-item>
@@ -210,6 +202,7 @@
 
 <script>
 import { listBom, getBom, delBom, addBom, updateBom } from "@/api/erp/production"
+import { listMaterial } from "@/api/erp/base"
 
 export default {
   name: "ProductionBom",
@@ -243,26 +236,15 @@ export default {
         { value: '0', label: '正常' },
         { value: '1', label: '停用' }
       ],
-      // 产成品选项（mock）
-      productOptions: [
-        { materialId: 3, materialCode: 'M2001', materialName: '半成品-电机组件', specification: 'DC24V-300W', unit: '台' },
-        { materialId: 4, materialCode: 'M3001', materialName: '成品-产品A', specification: '标准款', unit: '台' },
-        { materialId: 5, materialCode: 'M3002', materialName: '成品-产品B', specification: '增强款', unit: '台' }
-      ],
-      // 物料选项（mock）
-      materialOptions: [
-        { materialId: 1, materialCode: 'M1001', materialName: '原材料-钢板', specification: 'Q235B 2mm*1250mm', unit: '吨' },
-        { materialId: 2, materialCode: 'M1002', materialName: '电子元器件', specification: 'STM32F103C8T6', unit: '个' },
-        { materialId: 3, materialCode: 'M2001', materialName: '半成品-电机组件', specification: 'DC24V-300W', unit: '台' },
-        { materialId: 4, materialCode: 'M3001', materialName: '成品-产品A', specification: '标准款', unit: '台' },
-        { materialId: 5, materialCode: 'M3002', materialName: '成品-产品B', specification: '增强款', unit: '台' },
-        { materialId: 6, materialCode: 'M4001', materialName: '包装纸箱', specification: '60*40*40cm', unit: '个' }
-      ],
+      // 产成品选项（接入真实接口后动态加载）
+      productOptions: [],
+      // 物料选项（接入真实接口后动态加载）
+      materialOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
         pageSize: 10,
-        bomCode: undefined,
+        bomNo: undefined,
         productName: undefined
       },
       // 表单参数
@@ -271,17 +253,22 @@ export default {
       rules: {
         productId: [
           { required: true, message: "产成品不能为空", trigger: "change" }
-        ],
-        version: [
-          { required: true, message: "版本号不能为空", trigger: "blur" }
         ]
       }
     }
   },
   created() {
     this.getList()
+    this.loadMaterial()
   },
   methods: {
+    /** 加载物料下拉（产成品与物料清单共用） */
+    loadMaterial() {
+      listMaterial({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.materialOptions = response.rows
+        this.productOptions = response.rows
+      })
+    },
     /** 查询BOM列表 */
     getList() {
       this.loading = true
@@ -300,13 +287,11 @@ export default {
     reset() {
       this.form = {
         bomId: undefined,
-        bomCode: undefined,
+        bomNo: undefined,
         productId: undefined,
         productCode: undefined,
         productName: undefined,
-        productSpec: undefined,
         unit: undefined,
-        version: "V1.0",
         status: "0",
         remark: undefined,
         items: []
@@ -356,7 +341,6 @@ export default {
       if (m) {
         this.form.productCode = m.materialCode
         this.form.productName = m.materialName
-        this.form.productSpec = m.specification
         this.form.unit = m.unit
       }
     },

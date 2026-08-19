@@ -274,6 +274,7 @@
 
 <script>
 import { listPurchaseOrder, getPurchaseOrder, delPurchaseOrder, addPurchaseOrder, updatePurchaseOrder, submitPurchaseOrder, approvePurchaseOrder, rejectPurchaseOrder, completePurchaseOrder } from "@/api/erp/purchase"
+import { listSupplier, listMaterial } from "@/api/erp/base"
 
 export default {
   name: "PurchaseOrder",
@@ -310,23 +311,10 @@ export default {
         { value: '3', label: '已驳回', tagType: 'danger' },
         { value: '4', label: '已完成', tagType: 'success' }
       ],
-      // 供应商选项（mock）
-      supplierOptions: [
-        { supplierId: 1, supplierName: '华宇金属材料有限公司' },
-        { supplierId: 2, supplierName: '深圳联创电子有限公司' },
-        { supplierId: 3, supplierName: '上海启明包装有限公司' },
-        { supplierId: 4, supplierName: '广东源丰化工有限公司' },
-        { supplierId: 5, supplierName: '江苏力拓传动有限公司' }
-      ],
-      // 物料选项（mock，与基础资料物料一致）
-      materialOptions: [
-        { materialId: 1, materialCode: 'M1001', materialName: '原材料-钢板', specification: 'Q235B 2mm*1250mm', unit: '吨' },
-        { materialId: 2, materialCode: 'M1002', materialName: '电子元器件', specification: 'STM32F103C8T6', unit: '个' },
-        { materialId: 3, materialCode: 'M2001', materialName: '半成品-电机组件', specification: 'DC24V-300W', unit: '台' },
-        { materialId: 4, materialCode: 'M3001', materialName: '成品-产品A', specification: '标准款', unit: '台' },
-        { materialId: 5, materialCode: 'M3002', materialName: '成品-产品B', specification: '增强款', unit: '台' },
-        { materialId: 6, materialCode: 'M4001', materialName: '包装纸箱', specification: '60*40*40cm', unit: '个' }
-      ],
+      // 供应商选项（接入真实接口后动态加载）
+      supplierOptions: [],
+      // 物料选项（接入真实接口后动态加载）
+      materialOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -353,8 +341,22 @@ export default {
   },
   created() {
     this.getList()
+    this.loadSupplier()
+    this.loadMaterial()
   },
   methods: {
+    /** 加载供应商下拉 */
+    loadSupplier() {
+      listSupplier({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.supplierOptions = response.rows
+      })
+    },
+    /** 加载物料下拉 */
+    loadMaterial() {
+      listMaterial({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.materialOptions = response.rows
+      })
+    },
     /** 查询采购订单列表 */
     getList() {
       this.loading = true

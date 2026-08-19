@@ -274,6 +274,7 @@
 
 <script>
 import { listSaleOrder, getSaleOrder, delSaleOrder, addSaleOrder, updateSaleOrder, submitSaleOrder, approveSaleOrder, rejectSaleOrder, completeSaleOrder } from "@/api/erp/sale"
+import { listCustomer, listMaterial } from "@/api/erp/base"
 
 export default {
   name: "SaleOrder",
@@ -310,23 +311,10 @@ export default {
         { value: '3', label: '已驳回', tagType: 'danger' },
         { value: '4', label: '已完成', tagType: 'success' }
       ],
-      // 客户选项（mock）
-      customerOptions: [
-        { customerId: 1, customerName: '华东机械制造有限公司' },
-        { customerId: 2, customerName: '华南电子科技有限公司' },
-        { customerId: 3, customerName: '北方重工集团' },
-        { customerId: 4, customerName: '中联建设集团' },
-        { customerId: 5, customerName: '西南轨道交通有限公司' }
-      ],
-      // 物料选项（mock）
-      materialOptions: [
-        { materialId: 1, materialCode: 'M1001', materialName: '原材料-钢板', specification: 'Q235B 2mm*1250mm', unit: '吨' },
-        { materialId: 2, materialCode: 'M1002', materialName: '电子元器件', specification: 'STM32F103C8T6', unit: '个' },
-        { materialId: 3, materialCode: 'M2001', materialName: '半成品-电机组件', specification: 'DC24V-300W', unit: '台' },
-        { materialId: 4, materialCode: 'M3001', materialName: '成品-产品A', specification: '标准款', unit: '台' },
-        { materialId: 5, materialCode: 'M3002', materialName: '成品-产品B', specification: '增强款', unit: '台' },
-        { materialId: 6, materialCode: 'M4001', materialName: '包装纸箱', specification: '60*40*40cm', unit: '个' }
-      ],
+      // 客户选项（接入真实接口后动态加载）
+      customerOptions: [],
+      // 物料选项（接入真实接口后动态加载）
+      materialOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -353,8 +341,22 @@ export default {
   },
   created() {
     this.getList()
+    this.loadCustomer()
+    this.loadMaterial()
   },
   methods: {
+    /** 加载客户下拉 */
+    loadCustomer() {
+      listCustomer({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.customerOptions = response.rows
+      })
+    },
+    /** 加载物料下拉 */
+    loadMaterial() {
+      listMaterial({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.materialOptions = response.rows
+      })
+    },
     /** 查询销售订单列表 */
     getList() {
       this.loading = true

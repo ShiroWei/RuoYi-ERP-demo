@@ -78,6 +78,7 @@
 
 <script>
 import { listStock } from "@/api/erp/stock"
+import { listWarehouse } from "@/api/erp/base"
 
 export default {
   name: "StockInventory",
@@ -92,13 +93,8 @@ export default {
       total: 0,
       // 库存表格数据
       stockList: [],
-      // 仓库选项（mock）
-      warehouseOptions: [
-        { warehouseId: 1, warehouseName: '总仓-原材料仓' },
-        { warehouseId: 2, warehouseName: '半成品仓' },
-        { warehouseId: 3, warehouseName: '成品仓' },
-        { warehouseId: 4, warehouseName: '华东周转仓' }
-      ],
+      // 仓库选项（接入真实接口后动态加载）
+      warehouseOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -111,8 +107,15 @@ export default {
   },
   created() {
     this.getList()
+    this.loadWarehouse()
   },
   methods: {
+    /** 加载仓库下拉 */
+    loadWarehouse() {
+      listWarehouse({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.warehouseOptions = response.rows
+      })
+    },
     /** 查询库存列表 */
     getList() {
       this.loading = true

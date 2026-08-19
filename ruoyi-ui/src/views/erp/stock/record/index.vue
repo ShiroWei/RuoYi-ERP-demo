@@ -49,62 +49,11 @@
       </el-table-column>
       <el-table-column label="物料编码" align="center" prop="materialCode" width="110" />
       <el-table-column label="物料名称" align="center" prop="materialName" :show-overflow-tooltip="true" />
-      <el-table-column label="单位" align="center" prop="unit" width="80" />
       <el-table-column label="数量" align="center" prop="quantity" width="100" />
       <el-table-column label="仓库名称" align="center" prop="warehouseName" :show-overflow-tooltip="true" />
-      <el-table-column label="关联单据" align="center" prop="relatedBill" width="170" />
+      <el-table-column label="关联单据" align="center" prop="bizNo" width="170" />
       <el-table-column label="经办人" align="center" prop="operator" width="90" />
       <el-table-column label="出入库日期" align="center" prop="recordDate" width="120" />
-      <el-table-column label="状态" align="center" prop="status" width="100">
-        <template slot-scope="scope">
-          <dict-tag :options="billStatusOptions" :value="scope.row.status"/>
-        </template>
-      </el-table-column>
-      <el-table-column label="备注" align="center" prop="remark" :show-overflow-tooltip="true" />
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
-        <template slot-scope="scope">
-          <el-button
-            v-if="scope.row.status === '0'"
-            size="mini"
-            type="text"
-            icon="el-icon-promotion"
-            @click="handleSubmit(scope.row)"
-            v-hasPermi="['erp:stockRecord:edit']"
-          >提交审核</el-button>
-          <el-button
-            v-if="scope.row.status === '1'"
-            size="mini"
-            type="text"
-            icon="el-icon-check"
-            @click="handleApprove(scope.row)"
-            v-hasPermi="['erp:stockRecord:edit']"
-          >审核通过</el-button>
-          <el-button
-            v-if="scope.row.status === '1'"
-            size="mini"
-            type="text"
-            icon="el-icon-close"
-            @click="handleReject(scope.row)"
-            v-hasPermi="['erp:stockRecord:edit']"
-          >驳回</el-button>
-          <el-button
-            v-if="scope.row.status === '2'"
-            size="mini"
-            type="text"
-            icon="el-icon-finished"
-            @click="handleComplete(scope.row)"
-            v-hasPermi="['erp:stockRecord:edit']"
-          >完成</el-button>
-          <el-button
-            v-if="scope.row.status === '3'"
-            size="mini"
-            type="text"
-            icon="el-icon-refresh-left"
-            @click="handleSubmit(scope.row)"
-            v-hasPermi="['erp:stockRecord:edit']"
-          >重新提交</el-button>
-        </template>
-      </el-table-column>
     </el-table>
 
     <pagination
@@ -128,7 +77,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="仓库名称" prop="warehouseName">
-              <el-select v-model="form.warehouseName" placeholder="请选择仓库" style="width: 100%">
+              <el-select v-model="form.warehouseName" placeholder="请选择仓库" style="width: 100%" @change="warehouseChange">
                 <el-option v-for="item in warehouseOptions" :key="item.warehouseId" :label="item.warehouseName" :value="item.warehouseName" />
               </el-select>
             </el-form-item>
@@ -146,8 +95,8 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="关联单据" prop="relatedBill">
-              <el-input v-model="form.relatedBill" placeholder="请输入关联单据号" />
+            <el-form-item label="关联单据" prop="bizNo">
+              <el-input v-model="form.bizNo" placeholder="请输入关联单据号" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -176,7 +125,8 @@
 </template>
 
 <script>
-import { listStockRecord, addStockRecord, submitStockRecord, approveStockRecord, rejectStockRecord, completeStockRecord } from "@/api/erp/stock"
+import { listStockRecord, addStockRecord } from "@/api/erp/stock"
+import { listWarehouse, listMaterial } from "@/api/erp/base"
 
 export default {
   name: "StockRecord",
@@ -214,22 +164,10 @@ export default {
         { value: '3', label: '已驳回', tagType: 'danger' },
         { value: '4', label: '已完成', tagType: 'success' }
       ],
-      // 仓库选项（mock）
-      warehouseOptions: [
-        { warehouseId: 1, warehouseName: '总仓-原材料仓' },
-        { warehouseId: 2, warehouseName: '半成品仓' },
-        { warehouseId: 3, warehouseName: '成品仓' },
-        { warehouseId: 4, warehouseName: '华东周转仓' }
-      ],
-      // 物料选项（mock）
-      materialOptions: [
-        { materialId: 1, materialCode: 'M1001', materialName: '原材料-钢板' },
-        { materialId: 2, materialCode: 'M1002', materialName: '电子元器件' },
-        { materialId: 3, materialCode: 'M2001', materialName: '半成品-电机组件' },
-        { materialId: 4, materialCode: 'M3001', materialName: '成品-产品A' },
-        { materialId: 5, materialCode: 'M3002', materialName: '成品-产品B' },
-        { materialId: 6, materialCode: 'M4001', materialName: '包装纸箱' }
-      ],
+      // 仓库选项（接入真实接口后动态加载）
+      warehouseOptions: [],
+      // 物料选项（接入真实接口后动态加载）
+      materialOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -262,8 +200,27 @@ export default {
   },
   created() {
     this.getList()
+    this.loadWarehouse()
+    this.loadMaterial()
   },
   methods: {
+    /** 加载仓库下拉 */
+    loadWarehouse() {
+      listWarehouse({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.warehouseOptions = response.rows
+      })
+    },
+    /** 加载物料下拉 */
+    loadMaterial() {
+      listMaterial({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.materialOptions = response.rows
+      })
+    },
+    /** 选择仓库回填 id */
+    warehouseChange() {
+      const w = this.warehouseOptions.find(item => item.warehouseName === this.form.warehouseName)
+      this.form.warehouseId = w ? w.warehouseId : undefined
+    },
     /** 查询记录列表 */
     getList() {
       this.loading = true
@@ -287,13 +244,12 @@ export default {
         materialId: undefined,
         materialCode: undefined,
         materialName: undefined,
-        unit: undefined,
         quantity: undefined,
         warehouseName: undefined,
-        relatedBill: undefined,
+        warehouseId: undefined,
+        bizNo: undefined,
         operator: undefined,
         recordDate: undefined,
-        status: "0",
         remark: undefined
       }
       this.resetForm("form")
@@ -302,42 +258,6 @@ export default {
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
-    },
-    /** 提交审核 */
-    handleSubmit(row) {
-      this.$modal.confirm('确认提交单据「' + row.recordNo + '」审核？').then(function() {
-        return submitStockRecord(row.recordId)
-      }).then(() => {
-        this.getList()
-        this.$modal.msgSuccess("提交成功")
-      }).catch(() => {})
-    },
-    /** 审核通过 */
-    handleApprove(row) {
-      this.$modal.confirm('确认审核通过单据「' + row.recordNo + '」？').then(function() {
-        return approveStockRecord(row.recordId)
-      }).then(() => {
-        this.getList()
-        this.$modal.msgSuccess("审核通过")
-      }).catch(() => {})
-    },
-    /** 驳回 */
-    handleReject(row) {
-      this.$modal.confirm('确认驳回单据「' + row.recordNo + '」？').then(function() {
-        return rejectStockRecord(row.recordId)
-      }).then(() => {
-        this.getList()
-        this.$modal.msgSuccess("已驳回")
-      }).catch(() => {})
-    },
-    /** 完成 */
-    handleComplete(row) {
-      this.$modal.confirm('确认完成单据「' + row.recordNo + '」？').then(function() {
-        return completeStockRecord(row.recordId)
-      }).then(() => {
-        this.getList()
-        this.$modal.msgSuccess("已完成")
-      }).catch(() => {})
     },
     /** 重置按钮操作 */
     resetQuery() {
@@ -356,7 +276,6 @@ export default {
       if (m) {
         this.form.materialCode = m.materialCode
         this.form.materialName = m.materialName
-        this.form.unit = m.unit
       }
     },
     /** 提交按钮 */

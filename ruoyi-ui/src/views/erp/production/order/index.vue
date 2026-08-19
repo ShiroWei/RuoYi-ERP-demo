@@ -68,77 +68,21 @@
 
     <el-table v-loading="loading" :data="orderList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column type="expand">
-        <template slot-scope="props">
-          <el-table :data="props.row.items" size="mini">
-            <el-table-column label="物料编码" prop="materialCode" align="center" width="120" />
-            <el-table-column label="物料名称" prop="materialName" align="center" min-width="180" />
-            <el-table-column label="规格型号" prop="specification" align="center" min-width="180" />
-            <el-table-column label="单位" prop="unit" align="center" width="70" />
-            <el-table-column label="领料数量" prop="quantity" align="center" width="110" />
-          </el-table>
-        </template>
-      </el-table-column>
       <el-table-column label="工单编号" align="center" prop="orderNo" width="170" />
       <el-table-column label="产品编码" align="center" prop="productCode" width="110" />
       <el-table-column label="产品名称" align="center" prop="productName" :show-overflow-tooltip="true" />
-      <el-table-column label="规格型号" align="center" prop="productSpec" :show-overflow-tooltip="true" />
-      <el-table-column label="生产数量" align="center" prop="quantity" width="90" />
-      <el-table-column label="计划开工" align="center" prop="planStart" width="110" />
-      <el-table-column label="计划完工" align="center" prop="planEnd" width="110" />
-      <el-table-column label="优先级" align="center" prop="priority" width="80">
-        <template slot-scope="scope">
-          <dict-tag :options="priorityOptions" :value="scope.row.priority"/>
-        </template>
-      </el-table-column>
+      <el-table-column label="计划数量" align="center" prop="planQty" width="90" />
+      <el-table-column label="完工数量" align="center" prop="finishQty" width="90" />
+      <el-table-column label="工单日期" align="center" prop="orderDate" width="110" />
+      <el-table-column label="计划开工" align="center" prop="planStartDate" width="110" />
+      <el-table-column label="计划完工" align="center" prop="planEndDate" width="110" />
       <el-table-column label="生产状态" align="center" prop="status" width="90">
         <template slot-scope="scope">
           <dict-tag :options="productionStatusOptions" :value="scope.row.status"/>
         </template>
       </el-table-column>
-      <el-table-column label="车间" align="center" prop="workshop" width="90" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
-          <el-button
-            v-if="scope.row.status === '0'"
-            size="mini"
-            type="text"
-            icon="el-icon-promotion"
-            @click="handleSubmit(scope.row)"
-            v-hasPermi="['erp:workOrder:edit']"
-          >提交审核</el-button>
-          <el-button
-            v-if="scope.row.status === '1'"
-            size="mini"
-            type="text"
-            icon="el-icon-check"
-            @click="handleApprove(scope.row)"
-            v-hasPermi="['erp:workOrder:edit']"
-          >审核通过</el-button>
-          <el-button
-            v-if="scope.row.status === '1'"
-            size="mini"
-            type="text"
-            icon="el-icon-close"
-            @click="handleReject(scope.row)"
-            v-hasPermi="['erp:workOrder:edit']"
-          >驳回</el-button>
-          <el-button
-            v-if="scope.row.status === '2'"
-            size="mini"
-            type="text"
-            icon="el-icon-finished"
-            @click="handleComplete(scope.row)"
-            v-hasPermi="['erp:workOrder:edit']"
-          >完成</el-button>
-          <el-button
-            v-if="scope.row.status === '3'"
-            size="mini"
-            type="text"
-            icon="el-icon-refresh-left"
-            @click="handleSubmit(scope.row)"
-            v-hasPermi="['erp:workOrder:edit']"
-          >重新提交</el-button>
           <el-button
             v-if="scope.row.status === '0'"
             size="mini"
@@ -168,7 +112,7 @@
     />
 
     <!-- 添加或修改生产工单对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="860px" append-to-body>
+    <el-dialog :title="title" :visible.sync="open" width="640px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="90px">
         <el-row>
           <el-col :span="12">
@@ -179,84 +123,40 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="生产数量" prop="quantity">
-              <el-input-number v-model="form.quantity" :min="0" :controls="false" style="width: 100%" placeholder="生产数量" />
+            <el-form-item label="计划数量" prop="planQty">
+              <el-input-number v-model="form.planQty" :min="0" :controls="false" style="width: 100%" placeholder="计划数量" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row>
           <el-col :span="12">
-            <el-form-item label="计划开工" prop="planStart">
-              <el-date-picker v-model="form.planStart" type="date" value-format="yyyy-MM-dd" placeholder="选择日期" style="width: 100%" />
+            <el-form-item label="工单日期" prop="orderDate">
+              <el-date-picker v-model="form.orderDate" type="date" value-format="yyyy-MM-dd" placeholder="选择日期" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="计划完工" prop="planEnd">
-              <el-date-picker v-model="form.planEnd" type="date" value-format="yyyy-MM-dd" placeholder="选择日期" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row>
-          <el-col :span="8">
-            <el-form-item label="优先级" prop="priority">
-              <el-select v-model="form.priority" placeholder="优先级" style="width: 100%">
-                <el-option v-for="dict in priorityOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
             <el-form-item label="生产状态" prop="status">
               <el-select v-model="form.status" placeholder="生产状态" style="width: 100%">
                 <el-option v-for="dict in productionStatusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="8">
-            <el-form-item label="生产车间" prop="workshop">
-              <el-select v-model="form.workshop" placeholder="车间" style="width: 100%">
-                <el-option label="一车间" value="一车间" />
-                <el-option label="二车间" value="二车间" />
-                <el-option label="三车间" value="三车间" />
-              </el-select>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="计划开工" prop="planStartDate">
+              <el-date-picker v-model="form.planStartDate" type="date" value-format="yyyy-MM-dd" placeholder="选择日期" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="计划完工" prop="planEndDate">
+              <el-date-picker v-model="form.planEndDate" type="date" value-format="yyyy-MM-dd" placeholder="选择日期" style="width: 100%" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
         </el-form-item>
-        <el-divider content-position="left">领料清单（按BOM自动生成）</el-divider>
-        <el-table :data="form.items" border size="mini">
-          <el-table-column label="物料" min-width="180" align="center">
-            <template slot-scope="scope">
-              <el-select v-model="scope.row.materialId" placeholder="请选择物料" filterable style="width: 100%" @change="materialChange(scope.row)">
-                <el-option v-for="m in materialOptions" :key="m.materialId" :label="m.materialName" :value="m.materialId" />
-              </el-select>
-            </template>
-          </el-table-column>
-          <el-table-column label="规格型号" prop="specification" min-width="140" align="center">
-            <template slot-scope="scope">
-              <span>{{ scope.row.specification }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="单位" prop="unit" width="70" align="center">
-            <template slot-scope="scope">
-              <span>{{ scope.row.unit }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="领料数量" min-width="110" align="center">
-            <template slot-scope="scope">
-              <el-input-number v-model="scope.row.quantity" :min="0" :controls="false" size="mini" style="width: 100%" />
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="70" align="center">
-            <template slot-scope="scope">
-              <el-button size="mini" type="text" icon="el-icon-delete" @click="removeLine(scope.$index)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div style="margin-top: 10px; text-align: right">
-          <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="addLine">添加领料行</el-button>
-        </div>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button type="primary" @click="submitForm">确 定</el-button>
@@ -267,7 +167,8 @@
 </template>
 
 <script>
-import { listWorkOrder, getWorkOrder, delWorkOrder, addWorkOrder, updateWorkOrder, submitWorkOrder, approveWorkOrder, rejectWorkOrder, completeWorkOrder } from "@/api/erp/production"
+import { listWorkOrder, getWorkOrder, delWorkOrder, addWorkOrder, updateWorkOrder } from "@/api/erp/production"
+import { listMaterial } from "@/api/erp/base"
 
 export default {
   name: "ProductionOrder",
@@ -292,35 +193,15 @@ export default {
       title: "",
       // 是否显示弹出层
       open: false,
-      // 工单状态字典（统一单据流程：草稿-待审核-审核通过/驳回-完成）
+      // 工单状态字典（0未开始 1生产中 2已完工 3已关闭）
       productionStatusOptions: [
-        { value: '0', label: '草稿', tagType: 'info' },
-        { value: '1', label: '待审核', tagType: 'warning' },
-        { value: '2', label: '审核通过', tagType: 'primary' },
-        { value: '3', label: '已驳回', tagType: 'danger' },
-        { value: '4', label: '已完成', tagType: 'success' }
+        { value: '0', label: '未开始', tagType: 'info' },
+        { value: '1', label: '生产中', tagType: 'warning' },
+        { value: '2', label: '已完工', tagType: 'success' },
+        { value: '3', label: '已关闭', tagType: 'danger' }
       ],
-      // 优先级字典（接入真实接口后使用 sys_dict 的 erp_priority）
-      priorityOptions: [
-        { value: '1', label: '高', tagType: 'danger' },
-        { value: '2', label: '中', tagType: 'warning' },
-        { value: '3', label: '低', tagType: 'info' }
-      ],
-      // 产品选项（mock）
-      productOptions: [
-        { materialId: 3, materialCode: 'M2001', materialName: '半成品-电机组件', specification: 'DC24V-300W', unit: '台' },
-        { materialId: 4, materialCode: 'M3001', materialName: '成品-产品A', specification: '标准款', unit: '台' },
-        { materialId: 5, materialCode: 'M3002', materialName: '成品-产品B', specification: '增强款', unit: '台' }
-      ],
-      // 物料选项（mock）
-      materialOptions: [
-        { materialId: 1, materialCode: 'M1001', materialName: '原材料-钢板', specification: 'Q235B 2mm*1250mm', unit: '吨' },
-        { materialId: 2, materialCode: 'M1002', materialName: '电子元器件', specification: 'STM32F103C8T6', unit: '个' },
-        { materialId: 3, materialCode: 'M2001', materialName: '半成品-电机组件', specification: 'DC24V-300W', unit: '台' },
-        { materialId: 4, materialCode: 'M3001', materialName: '成品-产品A', specification: '标准款', unit: '台' },
-        { materialId: 5, materialCode: 'M3002', materialName: '成品-产品B', specification: '增强款', unit: '台' },
-        { materialId: 6, materialCode: 'M4001', materialName: '包装纸箱', specification: '60*40*40cm', unit: '个' }
-      ],
+      // 产品选项（接入真实接口后动态加载）
+      productOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -336,31 +217,32 @@ export default {
         productId: [
           { required: true, message: "生产产品不能为空", trigger: "change" }
         ],
-        quantity: [
-          { required: true, message: "生产数量不能为空", trigger: "blur" }
+        planQty: [
+          { required: true, message: "计划数量不能为空", trigger: "blur" }
         ],
-        planStart: [
+        orderDate: [
+          { required: true, message: "工单日期不能为空", trigger: "change" }
+        ],
+        planStartDate: [
           { required: true, message: "计划开工不能为空", trigger: "change" }
         ],
-        planEnd: [
+        planEndDate: [
           { required: true, message: "计划完工不能为空", trigger: "change" }
-        ],
-        priority: [
-          { required: true, message: "优先级不能为空", trigger: "change" }
-        ],
-        status: [
-          { required: true, message: "生产状态不能为空", trigger: "change" }
-        ],
-        workshop: [
-          { required: true, message: "生产车间不能为空", trigger: "change" }
         ]
       }
     }
   },
   created() {
     this.getList()
+    this.loadMaterial()
   },
   methods: {
+    /** 加载产品下拉 */
+    loadMaterial() {
+      listMaterial({ pageNum: 1, pageSize: 100 }).then(response => {
+        this.productOptions = response.rows
+      })
+    },
     /** 查询生产工单列表 */
     getList() {
       this.loading = true
@@ -383,17 +265,13 @@ export default {
         productId: undefined,
         productCode: undefined,
         productName: undefined,
-        productSpec: undefined,
-        unit: undefined,
-        quantity: undefined,
-        planStart: undefined,
-        planEnd: undefined,
-        priority: '2',
+        planQty: undefined,
+        finishQty: undefined,
+        orderDate: undefined,
+        planStartDate: undefined,
+        planEndDate: undefined,
         status: '0',
-        workshop: undefined,
-        bomCode: undefined,
-        remark: undefined,
-        items: []
+        remark: undefined
       }
       this.resetForm("form")
     },
@@ -401,42 +279,6 @@ export default {
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
-    },
-    /** 提交审核 */
-    handleSubmit(row) {
-      this.$modal.confirm('确认提交工单「' + row.orderNo + '」审核？').then(function() {
-        return submitWorkOrder(row.orderId)
-      }).then(() => {
-        this.getList()
-        this.$modal.msgSuccess("提交成功")
-      }).catch(() => {})
-    },
-    /** 审核通过 */
-    handleApprove(row) {
-      this.$modal.confirm('确认审核通过工单「' + row.orderNo + '」？').then(function() {
-        return approveWorkOrder(row.orderId)
-      }).then(() => {
-        this.getList()
-        this.$modal.msgSuccess("审核通过")
-      }).catch(() => {})
-    },
-    /** 驳回 */
-    handleReject(row) {
-      this.$modal.confirm('确认驳回工单「' + row.orderNo + '」？').then(function() {
-        return rejectWorkOrder(row.orderId)
-      }).then(() => {
-        this.getList()
-        this.$modal.msgSuccess("已驳回")
-      }).catch(() => {})
-    },
-    /** 完成 */
-    handleComplete(row) {
-      this.$modal.confirm('确认完成工单「' + row.orderNo + '」？').then(function() {
-        return completeWorkOrder(row.orderId)
-      }).then(() => {
-        this.getList()
-        this.$modal.msgSuccess("已完成")
-      }).catch(() => {})
     },
     /** 重置按钮操作 */
     resetQuery() {
@@ -471,36 +313,13 @@ export default {
       if (m) {
         this.form.productCode = m.materialCode
         this.form.productName = m.materialName
-        this.form.productSpec = m.specification
-        this.form.unit = m.unit
       }
-    },
-    /** 选择物料回填行数据 */
-    materialChange(row) {
-      const m = this.materialOptions.find(item => item.materialId === row.materialId)
-      if (m) {
-        row.materialCode = m.materialCode
-        row.materialName = m.materialName
-        row.specification = m.specification
-        row.unit = m.unit
-      }
-    },
-    /** 添加领料行 */
-    addLine() {
-      this.form.items.push({
-        itemId: undefined, materialId: undefined, materialCode: undefined, materialName: undefined,
-        specification: undefined, unit: undefined, quantity: undefined
-      })
-    },
-    /** 删除领料行 */
-    removeLine(index) {
-      this.form.items.splice(index, 1)
     },
     /** 提交按钮 */
     submitForm: function() {
       this.$refs["form"].validate(valid => {
         if (valid) {
-          if (this.form.planEnd < this.form.planStart) {
+          if (this.form.planEndDate < this.form.planStartDate) {
             this.$modal.msgWarning("计划完工日期不能早于计划开工日期")
             return
           }
