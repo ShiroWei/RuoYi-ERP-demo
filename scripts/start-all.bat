@@ -41,6 +41,7 @@ start "ERP-Gen"     cmd /k "call bin\run-modules-gen.bat"
 start "ERP-Job"     cmd /k "call bin\run-modules-job.bat"
 start "ERP-File"    cmd /k "call bin\run-modules-file.bat"
 start "ERP-Monitor" cmd /k "call bin\run-monitor.bat"
+start "ERP-ERP"     cmd /k "call bin\run-modules-erp.bat"
 
 echo [3/3] Starting frontend ...
 start "ERP-UI" cmd /k "cd /d %~dp0..\ruoyi-ui && npm run dev"
