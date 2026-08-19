@@ -19,8 +19,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select date_format(order_date, '%m-%d') as date, ifnull(sum(total_amount), 0) as amount
         from erp_purchase_order
         where status in ('2', '4') and order_date &gt;= date_sub(curdate(), interval 6 day)
-        group by date_format(order_date, '%Y-%m-%d')
-        order by date_format(order_date, '%Y-%m-%d')
+        group by date_format(order_date, '%m-%d')
+        order by min(order_date)
     </select>
 
     <!-- 采购报表-供应商分布 -->
@@ -59,8 +59,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select date_format(order_date, '%m-%d') as date, ifnull(sum(total_amount), 0) as amount
         from erp_sale_order
         where status in ('2', '4') and order_date &gt;= date_sub(curdate(), interval 6 day)
-        group by date_format(order_date, '%Y-%m-%d')
-        order by date_format(order_date, '%Y-%m-%d')
+        group by date_format(order_date, '%m-%d')
+        order by min(order_date)
     </select>
 
     <!-- 销售报表-商品排名 -->
@@ -85,7 +85,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         left join erp_sale_order_item i on i.order_id = o.order_id
         left join erp_material m on m.material_id = i.material_id
         where o.status in ('2', '4')
-        group by o.order_id, c.customer_name
+        group by o.order_id, c.customer_name, m.material_name
         order by o.order_id desc
         limit 20
     </select>
@@ -125,7 +125,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                sum(case when r.direction = '0' then r.quantity else 0 end) as outQty
         from erp_stock_record r
         where r.record_date &gt;= date_sub(curdate(), interval 6 day)
-        group by date_format(r.record_date, '%Y-%m-%d')
+        group by date_format(r.record_date, '%m-%d')
+        order by min(r.record_date)
     </select>
 
     <!-- 库存报表-明细行 -->
@@ -159,12 +160,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <select id="selectProfitTrend" resultType="java.util.Map">
         select date_format(o.order_date, '%m月') as month,
                ifnull(sum(o.total_amount), 0) as revenue,
-               (select ifnull(sum(i2.quantity * m2.purchase_price), 0)
-                from erp_sale_order o2
-                join erp_sale_order_item i2 on i2.order_id = o2.order_id
-                left join erp_material m2 on m2.material_id = i2.material_id
-                where o2.status in ('2', '4') and date_format(o2.order_date, '%Y-%m') = date_format(o.order_date, '%Y-%m')) as cost
+               ifnull(max(c.cost), 0) as cost
         from erp_sale_order o
+        left join (
+            select date_format(o2.order_date, '%Y-%m') as ym,
+                   sum(i2.quantity * m2.purchase_price) as cost
+            from erp_sale_order o2
+            join erp_sale_order_item i2 on i2.order_id = o2.order_id
+            left join erp_material m2 on m2.material_id = i2.material_id
+            where o2.status in ('2', '4')
+            group by date_format(o2.order_date, '%Y-%m')
+        ) c on c.ym = date_format(o.order_date, '%Y-%m')
         where o.status in ('2', '4') and year(o.order_date) = year(curdate())
         group by date_format(o.order_date, '%Y-%m'), date_format(o.order_date, '%m月')
         order by date_format(o.order_date, '%Y-%m')
@@ -196,7 +202,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         left join erp_sale_order_item i on i.order_id = o.order_id
         left join erp_material m on m.material_id = i.material_id
         where o.status in ('2', '4')
-        group by o.order_id, c.customer_name
+        group by o.order_id, c.customer_name, m.material_name
         order by o.order_id desc
         limit 20
     </select>
