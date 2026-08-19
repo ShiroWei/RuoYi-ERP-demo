@@ -1,126 +1,143 @@
 import request from '@/utils/request'
-import { listPurchaseOrder, listPurchaseInbound, listPurchaseReturn } from '@/api/erp/purchase'
-import { listSaleOrder, listSaleOutbound, listSaleReturn } from '@/api/erp/sale'
-import { listStockRecord, listStockCheck, listStockTransfer } from '@/api/erp/stock'
+import { getPurchaseReportData, getSaleReportData, getStockReportData, getPendingCounts } from '@/api/erp/report'
+import { listPurchaseOrder, listPurchaseInbound } from '@/api/erp/purchase'
+import { listSaleOrder, listSaleOutbound } from '@/api/erp/sale'
+import { listStockRecord, listStockCheck, listStockTransfer, listStock } from '@/api/erp/stock'
 import { listPayment } from '@/api/erp/finance'
-import { listWorkOrder } from '@/api/erp/production'
+import { listWorkOrder, listBom } from '@/api/erp/production'
+import { listSupplier, listCustomer } from '@/api/erp/base'
 
-// 首页工作台统计卡片数据
-// 当前返回 mock 演示数据；接入真实接口后，改为 request 调用即可：
-// export function getPanelData() {
-//   return request({
-//     url: '/system/dashboard/panel',
-//     method: 'get'
-//   })
-// }
-export function getPanelData() {
-  return Promise.resolve({
-    todoCount: 12,
-    purchaseCount: 6,
-    saleAmount: 286500,
-    stockWarning: 8
-  })
+const pendingPath = {
+  '采购订单': '/erp/purchase/order',
+  '销售订单': '/erp/sale/order',
+  '库存调拨': '/erp/stock/transfer',
+  '收付款单': '/erp/finance/payment'
 }
 
-// 待审单据列表（工作台左侧）：从各业务模块 mock 汇总 status=待审核 的单据，并可点击直达
-// 真实接口：
-// export function getTodoList() {
-//   return request({ url: '/erp/order/pending', method: 'get' })
-// }
+// 待审单据列表（来自真实待办统计）
 export function getTodoList() {
-  const page = { pageNum: 1, pageSize: 100 }
-  return Promise.all([
-    listPurchaseOrder(page), listPurchaseInbound(page), listPurchaseReturn(page),
-    listSaleOrder(page), listSaleOutbound(page), listSaleReturn(page),
-    listStockRecord(page), listStockCheck(page), listStockTransfer(page),
-    listPayment(page), listWorkOrder(page)
-  ]).then(([po, pi, pr, so, soo, sr, srec, sc, st, pay, wo]) => {
-    const todo = []
-    const push = (rows, billType, titleFn, amountFn, timeFn, path) => {
-      rows.filter(item => String(item.status) === '1').forEach(item => {
-        todo.push({
-          id: titleFn(item),
-          billType,
-          title: titleFn(item),
-          amount: amountFn(item),
-          createTime: timeFn(item),
-          status: '待审核',
-          path
-        })
-      })
+  return getPendingCounts().then(res => {
+    const items = (res && res.items) || []
+    return items.map(item => ({
+      id: item.name,
+      billType: item.name,
+      title: `${item.name}（${item.count} 张）`,
+      amount: item.count,
+      createTime: '',
+      status: '待审核',
+      path: pendingPath[item.name] || '/erp/purchase/order'
+    }))
+  })
+}
+
+// summary 固定顺序取值：purchase[总额,订单数,供应商数,均额] sale[总额,订单数,客户数,均额] stock[总量,总值,预警数,仓数]
+const valueOf = (summary, index) => {
+  const item = (summary || [])[index]
+  return item ? Number(item.value || 0) : 0
+}
+
+// 首页统计卡片
+export function getPanelData() {
+  const pendingPromise = getPendingCounts().then(res => (res && res.items) || [])
+  const salePromise = getSaleReportData()
+  const purchasePromise = getPurchaseReportData()
+  const stockPromise = listStock({ pageNum: 1, pageSize: 1000 })
+  return Promise.all([pendingPromise, salePromise, purchasePromise, stockPromise]).then(([items, sale, purchase, stock]) => {
+    let todoCount = 0
+    let purchaseCount = 0
+    items.forEach(item => {
+      todoCount += Number(item.count || 0)
+      if (item.name === '采购订单') {
+        purchaseCount = Number(item.count || 0)
+      }
+    })
+    const saleAmount = valueOf(sale.summary, 0)
+    const todayPurchase = valueOf(purchase.summary, 0)
+    const stockWarning = (stock.rows || []).filter(item => Number(item.quantity) < Number(item.safeStock)).length
+    return {
+      todoCount,
+      purchaseCount,
+      saleAmount,
+      stockWarning,
+      todaySale: saleAmount,
+      todayPurchase
     }
-    push(po.rows, '采购订单', i => i.orderNo + '（' + (i.supplierName || '') + '）', i => i.totalAmount, i => i.createTime, '/erp/purchase/order')
-    push(pi.rows, '采购入库', i => i.inboundNo + '（' + (i.supplierName || '') + '）', i => i.totalAmount, i => i.createTime, '/erp/purchase/inbound')
-    push(pr.rows, '采购退货', i => i.returnNo, i => i.totalAmount, i => i.createTime, '/erp/purchase/return')
-    push(so.rows, '销售订单', i => i.orderNo + '（' + (i.customerName || '') + '）', i => i.totalAmount, i => i.createTime, '/erp/sale/order')
-    push(soo.rows, '销售出库', i => i.outboundNo, i => i.totalAmount, i => i.createTime, '/erp/sale/outbound')
-    push(sr.rows, '销售退货', i => i.returnNo, i => i.totalAmount, i => i.createTime, '/erp/sale/return')
-    push(srec.rows, '出入库记录', i => i.recordNo, i => i.quantity, i => i.recordDate, '/erp/stock/record')
-    push(sc.rows, '库存盘点', i => i.checkNo + '（' + (i.warehouseName || '') + '）', () => 0, i => i.createTime || i.checkDate, '/erp/stock/check')
-    push(st.rows, '库存调拨', i => i.transferNo, i => i.quantity, i => i.createTime || i.transferDate, '/erp/stock/transfer')
-    push(pay.rows, '收付款单', i => i.paymentNo + '（' + (i.partnerName || '') + '）', i => i.amount, i => i.createTime || i.paymentDate, '/erp/finance/payment')
-    push(wo.rows, '生产工单', i => i.orderNo + '（' + (i.productName || '') + '）', i => i.quantity, i => i.createTime || i.planStart, '/erp/production/order')
-    return todo
   })
 }
 
-// 首页折线图数据（近7日销售/采购趋势）
-// 真实接口：
-// export function getLineChartData() {
-//   return request({ url: '/system/dashboard/line', method: 'get' })
-// }
+// 近7日销售/采购趋势
 export function getLineChartData() {
-  return Promise.resolve({
-    expectedData: [100, 120, 161, 134, 105, 160, 165],
-    actualData: [120, 82, 91, 154, 162, 140, 145]
+  return Promise.all([getSaleReportData(), getPurchaseReportData()]).then(([sale, purchase]) => {
+    const saleAmounts = ((sale.trend && sale.trend.amounts) || []).map(v => Math.round(Number(v) / 10000 * 100) / 100)
+    const purchaseAmounts = ((purchase.trend && purchase.trend.amounts) || []).map(v => Math.round(Number(v) / 10000 * 100) / 100)
+    return {
+      expectedData: saleAmounts,
+      actualData: purchaseAmounts
+    }
   })
 }
 
-// 首页柱状图数据（各周出入库量）
-// 真实接口：
-// export function getBarChartData() {
-//   return request({ url: '/system/dashboard/bar', method: 'get' })
-// }
+// 近7日出入库量
 export function getBarChartData() {
-  return Promise.resolve({
-    pageA: [30, 42, 35, 51, 49, 62, 69, 91, 126],
-    pageB: [20, 32, 25, 41, 39, 52, 59, 71, 96],
-    pageC: [10, 22, 15, 31, 29, 42, 49, 61, 76]
+  return getStockReportData().then(res => {
+    const trend = (res && res.inOutTrend) || {}
+    return {
+      pageA: (trend.in || []).map(v => Number(v)),
+      pageB: (trend.out || []).map(v => Number(v)),
+      pageC: (trend.in || []).map(v => 0)
+    }
   })
 }
 
-// 首页饼图数据（业务单据类型分布）
-// 真实接口：
-// export function getPieChartData() {
-//   return request({ url: '/system/dashboard/pie', method: 'get' })
-// }
+// 单据类型分布
 export function getPieChartData() {
-  return Promise.resolve({
-    series: [
-      { value: 335, name: '采购订单' },
-      { value: 310, name: '销售订单' },
-      { value: 234, name: '生产工单' },
-      { value: 135, name: '库存调拨' },
-      { value: 148, name: '其他' }
-    ]
+  const page = { pageNum: 1, pageSize: 1 }
+  return Promise.all([
+    listPurchaseOrder(page), listSaleOrder(page), listStockRecord(page),
+    listPayment(page), listWorkOrder(page), listPurchaseInbound(page), listSaleOutbound(page)
+  ]).then(([po, so, srec, pay, wo, pi, soo]) => {
+    const series = []
+    const push = (name, total) => {
+      if (total > 0) series.push({ value: total, name })
+    }
+    push('采购订单', po.total)
+    push('采购入库', pi.total)
+    push('销售订单', so.total)
+    push('销售出库', soo.total)
+    push('出入库记录', srec.total)
+    push('收付款单', pay.total)
+    push('生产工单', wo.total)
+    if (series.length === 0) {
+      series.push({ value: 1, name: '暂无数据' })
+    }
+    return { series }
   })
 }
 
-// 首页雷达图数据（运营效率多维评估）
-// 真实接口：
-// export function getRaddarChartData() {
-//   return request({ url: '/system/dashboard/raddar', method: 'get' })
-// }
+// 运营效率评估（基于真实汇总数据推导）
 export function getRaddarChartData() {
-  return Promise.resolve({
-    indicator: [
+  return Promise.all([getSaleReportData(), getPurchaseReportData(), getStockReportData(), getPendingCounts(), listSupplier({ pageNum: 1, pageSize: 1 }), listCustomer({ pageNum: 1, pageSize: 1 })]).then(([sale, purchase, stock, pending, supplier, customer]) => {
+    let pendingTotal = 0
+    ;(pending.items || []).forEach(i => { pendingTotal += Number(i.count || 0) })
+    const stockTotal = valueOf(stock.summary, 0)
+    const stockLow = valueOf(stock.summary, 2)
+    const calc = (val, max) => Math.max(0, Math.min(100, Math.round((val || 0) / (max || 1) * 100)))
+    const indicator = [
       { name: '库存周转', max: 100 },
       { name: '销售达成', max: 100 },
-      { name: '采购及时', max: 100 },
-      { name: '生产完成', max: 100 },
-      { name: '资金回笼', max: 100 },
-      { name: '客户满意', max: 100 }
-    ],
-    series: [81, 92, 76, 68, 85, 88]
+      { name: '采购效率', max: 100 },
+      { name: '审批效率', max: 100 },
+      { name: '库存安全', max: 100 },
+      { name: '客户覆盖', max: 100 }
+    ]
+    const series = [
+      calc(stockTotal, 200000),
+      calc(valueOf(sale.summary, 0), 500000),
+      calc(valueOf(purchase.summary, 0), 500000),
+      Math.max(20, 100 - pendingTotal * 10),
+      Math.max(20, 100 - stockLow * 15),
+      calc(customer.total, 50)
+    ]
+    return { indicator, series }
   })
 }
