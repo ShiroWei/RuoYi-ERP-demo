@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.stock.mapper.ErpStockTransferMapper">
+
+    <resultMap type="ErpStockTransfer" id="ErpStockTransferResult">
+        <result property="transferId"       column="transfer_id"       />
+        <result property="transferNo"       column="transfer_no"       />
+        <result property="fromWarehouseId"  column="from_warehouse_id" />
+        <result property="toWarehouseId"    column="to_warehouse_id"   />
+        <result property="materialId"       column="material_id"       />
+        <result property="quantity"         column="quantity"          />
+        <result property="transferDate"     column="transfer_date"     />
+        <result property="status"           column="status"            />
+        <result property="materialCode"     column="material_code"     />
+        <result property="materialName"     column="material_name"     />
+        <result property="fromWarehouseName" column="from_warehouse_name" />
+        <result property="toWarehouseName"  column="to_warehouse_name" />
+        <result property="createBy"         column="create_by"         />
+        <result property="createTime"       column="create_time"       />
+        <result property="updateBy"         column="update_by"         />
+        <result property="updateTime"       column="update_time"       />
+    </resultMap>
+
+    <sql id="selectErpStockTransferVo">
+        select t.transfer_id, t.transfer_no, t.from_warehouse_id, t.to_warehouse_id,
+               t.material_id, t.quantity, t.transfer_date, t.status,
+               m.material_code, m.material_name,
+               fw.warehouse_name as from_warehouse_name,
+               tw.warehouse_name as to_warehouse_name,
+               t.create_by, t.create_time, t.update_by, t.update_time
+        from erp_stock_transfer t
+        left join erp_material m on m.material_id = t.material_id
+        left join erp_warehouse fw on fw.warehouse_id = t.from_warehouse_id
+        left join erp_warehouse tw on tw.warehouse_id = t.to_warehouse_id
+    </sql>
+
+    <select id="selectErpStockTransferList" parameterType="ErpStockTransfer" resultMap="ErpStockTransferResult">
+        <include refid="selectErpStockTransferVo"/>
+        <where>
+            <if test="fromWarehouseId != null"> and t.from_warehouse_id = #{fromWarehouseId}</if>
+            <if test="toWarehouseId != null"> and t.to_warehouse_id = #{toWarehouseId}</if>
+            <if test="materialId != null"> and t.material_id = #{materialId}</if>
+            <if test="status != null and status != ''"> and t.status = #{status}</if>
+            <if test="materialName != null and materialName != ''"> and m.material_name like concat('%', #{materialName}, '%')</if>
+        </where>
+        order by t.transfer_id desc
+    </select>
+
+    <select id="selectErpStockTransferById" parameterType="Long" resultMap="ErpStockTransferResult">
+        <include refid="selectErpStockTransferVo"/>
+        where t.transfer_id = #{transferId}
+    </select>
+
+    <insert id="insertErpStockTransfer" parameterType="ErpStockTransfer" useGeneratedKeys="true" keyProperty="transferId">
+        insert into erp_stock_transfer
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="transferNo != null">transfer_no,</if>
+            <if test="fromWarehouseId != null">from_warehouse_id,</if>
+            <if test="toWarehouseId != null">to_warehouse_id,</if>
+            <if test="materialId != null">material_id,</if>
+            <if test="quantity != null">quantity,</if>
+            <if test="transferDate != null">transfer_date,</if>
+            <if test="status != null">status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="transferNo != null">#{transferNo},</if>
+            <if test="fromWarehouseId != null">#{fromWarehouseId},</if>
+            <if test="toWarehouseId != null">#{toWarehouseId},</if>
+            <if test="materialId != null">#{materialId},</if>
+            <if test="quantity != null">#{quantity},</if>
+            <if test="transferDate != null">#{transferDate},</if>
+            <if test="status != null">#{status},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateErpStockTransfer" parameterType="ErpStockTransfer">
+        update erp_stock_transfer
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="transferNo != null">transfer_no = #{transferNo},</if>
+            <if test="fromWarehouseId != null">from_warehouse_id = #{fromWarehouseId},</if>
+            <if test="toWarehouseId != null">to_warehouse_id = #{toWarehouseId},</if>
+            <if test="materialId != null">material_id = #{materialId},</if>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="transferDate != null">transfer_date = #{transferDate},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where transfer_id = #{transferId}
+    </update>
+
+    <delete id="deleteErpStockTransferById" parameterType="Long">
+        delete from erp_stock_transfer where transfer_id = #{transferId}
+    </delete>
+
+</mapper>
