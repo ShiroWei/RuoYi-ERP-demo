@@ -96,6 +96,11 @@ public interface ErpReportMapper
     public List<Map<String, Object>> selectProfitByProduct();
 
     /**
+     * 利润报表-成本构成
+     */
+    public List<Map<String, Object>> selectProfitCostPie();
+
+    /**
      * 利润报表-明细行
      */
     public List<Map<String, Object>> selectProfitRows();

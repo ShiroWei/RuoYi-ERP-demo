@@ -189,6 +189,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         limit 5
     </select>
 
+    <!-- 利润报表-成本构成 -->
+    <select id="selectProfitCostPie" resultType="java.util.Map">
+        select m.material_name as name, ifnull(sum(i.quantity * m.purchase_price), 0) as value
+        from erp_sale_order o
+        join erp_sale_order_item i on i.order_id = o.order_id
+        left join erp_material m on m.material_id = i.material_id
+        where o.status in ('2', '4')
+        group by i.material_id, m.material_name
+        order by value desc
+        limit 5
+    </select>
+
     <!-- 利润报表-明细行 -->
     <select id="selectProfitRows" resultType="java.util.Map">
         select o.order_no as no, c.customer_name as customerName, m.material_name as productName,

@@ -132,6 +132,7 @@ public class ErpReportServiceImpl implements IErpReportService
         trend.put("profit", profits);
         result.put("trend", trend);
         result.put("productProfit", reportMapper.selectProfitByProduct());
+        result.put("costPie", reportMapper.selectProfitCostPie());
         result.put("rows", translateProfitRows(reportMapper.selectProfitRows()));
         return result;
     }
