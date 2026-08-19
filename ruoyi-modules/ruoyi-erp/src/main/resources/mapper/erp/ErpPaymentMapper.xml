@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.finance.mapper.ErpPaymentMapper">
+
+    <resultMap type="ErpPayment" id="ErpPaymentResult">
+        <result property="paymentId"    column="payment_id"    />
+        <result property="paymentNo"    column="payment_no"    />
+        <result property="paymentType"  column="payment_type"  />
+        <result property="billNo"       column="bill_no"       />
+        <result property="partnerType"  column="partner_type"  />
+        <result property="partnerId"    column="partner_id"    />
+        <result property="amount"       column="amount"        />
+        <result property="paymentDate"  column="payment_date"  />
+        <result property="status"       column="status"        />
+        <result property="partnerName"  column="partner_name"  />
+        <result property="createBy"     column="create_by"     />
+        <result property="createTime"   column="create_time"   />
+        <result property="updateBy"     column="update_by"     />
+        <result property="updateTime"   column="update_time"   />
+    </resultMap>
+
+    <sql id="selectErpPaymentVo">
+        select p.payment_id, p.payment_no, p.payment_type, p.bill_no, p.partner_type,
+               p.partner_id, p.amount, p.payment_date, p.status,
+               coalesce(c.customer_name, s.supplier_name) as partner_name,
+               p.create_by, p.create_time, p.update_by, p.update_time
+        from erp_payment p
+        left join erp_customer c on c.customer_id = p.partner_id and p.partner_type = '客户'
+        left join erp_supplier s on s.supplier_id = p.partner_id and p.partner_type = '供应商'
+    </sql>
+
+    <select id="selectErpPaymentList" parameterType="ErpPayment" resultMap="ErpPaymentResult">
+        <include refid="selectErpPaymentVo"/>
+        <where>
+            <if test="paymentType != null and paymentType != ''"> and p.payment_type = #{paymentType}</if>
+            <if test="billNo != null and billNo != ''"> and p.bill_no = #{billNo}</if>
+            <if test="partnerType != null and partnerType != ''"> and p.partner_type = #{partnerType}</if>
+            <if test="partnerId != null"> and p.partner_id = #{partnerId}</if>
+            <if test="status != null and status != ''"> and p.status = #{status}</if>
+        </where>
+        order by p.payment_id desc
+    </select>
+
+    <select id="selectErpPaymentById" parameterType="Long" resultMap="ErpPaymentResult">
+        <include refid="selectErpPaymentVo"/>
+        where p.payment_id = #{paymentId}
+    </select>
+
+    <insert id="insertErpPayment" parameterType="ErpPayment" useGeneratedKeys="true" keyProperty="paymentId">
+        insert into erp_payment
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="paymentNo != null">payment_no,</if>
+            <if test="paymentType != null">payment_type,</if>
+            <if test="billNo != null">bill_no,</if>
+            <if test="partnerType != null">partner_type,</if>
+            <if test="partnerId != null">partner_id,</if>
+            <if test="amount != null">amount,</if>
+            <if test="paymentDate != null">payment_date,</if>
+            <if test="status != null">status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="paymentNo != null">#{paymentNo},</if>
+            <if test="paymentType != null">#{paymentType},</if>
+            <if test="billNo != null">#{billNo},</if>
+            <if test="partnerType != null">#{partnerType},</if>
+            <if test="partnerId != null">#{partnerId},</if>
+            <if test="amount != null">#{amount},</if>
+            <if test="paymentDate != null">#{paymentDate},</if>
+            <if test="status != null">#{status},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateErpPayment" parameterType="ErpPayment">
+        update erp_payment
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="paymentNo != null">payment_no = #{paymentNo},</if>
+            <if test="paymentType != null">payment_type = #{paymentType},</if>
+            <if test="billNo != null">bill_no = #{billNo},</if>
+            <if test="partnerType != null">partner_type = #{partnerType},</if>
+            <if test="partnerId != null">partner_id = #{partnerId},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="paymentDate != null">payment_date = #{paymentDate},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where payment_id = #{paymentId}
+    </update>
+
+    <delete id="deleteErpPaymentById" parameterType="Long">
+        delete from erp_payment where payment_id = #{paymentId}
+    </delete>
+
+</mapper>
