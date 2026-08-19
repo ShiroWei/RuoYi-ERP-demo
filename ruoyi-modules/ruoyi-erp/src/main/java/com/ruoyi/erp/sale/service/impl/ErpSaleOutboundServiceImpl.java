@@ -1,13 +1,19 @@
 package com.ruoyi.erp.sale.service.impl;
 
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.erp.sale.domain.ErpSaleOutbound;
+import com.ruoyi.erp.sale.domain.ErpSaleOrderItem;
 import com.ruoyi.erp.sale.mapper.ErpSaleOutboundMapper;
+import com.ruoyi.erp.sale.mapper.ErpSaleOrderItemMapper;
 import com.ruoyi.erp.sale.service.IErpSaleOutboundService;
+import com.ruoyi.erp.stock.domain.ErpStock;
+import com.ruoyi.erp.stock.mapper.ErpStockMapper;
 
 /**
  * 销售出库单Service业务层处理
@@ -19,6 +25,12 @@ public class ErpSaleOutboundServiceImpl implements IErpSaleOutboundService
 {
     @Autowired
     private ErpSaleOutboundMapper saleOutboundMapper;
+
+    @Autowired
+    private ErpSaleOrderItemMapper saleOrderItemMapper;
+
+    @Autowired
+    private ErpStockMapper stockMapper;
 
     /**
      * 查询销售出库单
@@ -99,12 +111,33 @@ public class ErpSaleOutboundServiceImpl implements IErpSaleOutboundService
     }
 
     /**
-     * 完成（审核通过 -> 已完成）
+     * 完成（审核通过 -> 已完成）+ 库存联动
      */
     @Override
+    @Transactional
     public int completeErpSaleOutbound(Long outboundId)
     {
-        return updateStatus(outboundId, "4");
+        ErpSaleOutbound outbound = saleOutboundMapper.selectErpSaleOutboundById(outboundId);
+        if ("4".equals(outbound.getStatus()))
+        {
+            return 1;
+        }
+        int rows = updateStatus(outboundId, "4");
+        if (rows > 0 && outbound.getOrderId() != null && outbound.getOrderId() > 0)
+        {
+            List<ErpSaleOrderItem> items = saleOrderItemMapper.selectErpSaleOrderItemByOrderId(outbound.getOrderId());
+            for (ErpSaleOrderItem item : items)
+            {
+                ErpStock stock = stockMapper.selectErpStockByWarehouseAndMaterial(outbound.getWarehouseId(), item.getMaterialId());
+                BigDecimal currentQty = stock != null ? stock.getQuantity() : BigDecimal.ZERO;
+                if (currentQty.compareTo(item.getQuantity()) < 0)
+                {
+                    throw new RuntimeException("库存不足");
+                }
+                stockMapper.insertOrAddStock(outbound.getWarehouseId(), item.getMaterialId(), item.getQuantity().negate());
+            }
+        }
+        return rows;
     }
 
     /**

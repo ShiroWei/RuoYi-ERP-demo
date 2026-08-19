@@ -12,6 +12,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="materialCode"  column="material_code"  />
         <result property="materialName"  column="material_name"  />
         <result property="warehouseName" column="warehouse_name" />
+        <result property="safeStock"     column="safe_stock"     />
+        <result property="unit"          column="unit"           />
+        <result property="purchasePrice" column="purchase_price" />
+        <result property="specification" column="specification"  />
+        <result property="amount"        column="amount"         />
         <result property="createBy"      column="create_by"      />
         <result property="createTime"    column="create_time"    />
         <result property="updateBy"      column="update_by"      />
@@ -20,7 +25,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <sql id="selectErpStockVo">
         select s.stock_id, s.warehouse_id, s.material_id, s.quantity,
-               m.material_code, m.material_name, w.warehouse_name,
+               m.material_code, m.material_name, m.safe_stock, m.unit, m.purchase_price,
+               m.specification, round(s.quantity * m.purchase_price, 2) as amount,
+               w.warehouse_name,
                s.create_by, s.create_time, s.update_by, s.update_time
         from erp_stock s
         left join erp_material m on m.material_id = s.material_id
@@ -42,6 +49,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="selectErpStockVo"/>
         where s.stock_id = #{stockId}
     </select>
+
+    <select id="selectErpStockByWarehouseAndMaterial" resultMap="ErpStockResult">
+        <include refid="selectErpStockVo"/>
+        where s.warehouse_id = #{warehouseId} and s.material_id = #{materialId}
+    </select>
+
+    <insert id="insertOrAddStock">
+        insert into erp_stock(warehouse_id, material_id, quantity, create_by, create_time, update_by, update_time)
+        values(#{warehouseId}, #{materialId}, #{quantity}, 'admin', sysdate(), 'admin', sysdate())
+        on duplicate key update quantity = quantity + #{quantity}, update_by = 'admin', update_time = sysdate()
+    </insert>
 
     <insert id="insertErpStock" parameterType="ErpStock" useGeneratedKeys="true" keyProperty="stockId">
         insert into erp_stock

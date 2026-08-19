@@ -3,11 +3,15 @@ package com.ruoyi.erp.purchase.service.impl;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.erp.purchase.domain.ErpPurchaseInbound;
+import com.ruoyi.erp.purchase.domain.ErpPurchaseOrderItem;
 import com.ruoyi.erp.purchase.mapper.ErpPurchaseInboundMapper;
+import com.ruoyi.erp.purchase.mapper.ErpPurchaseOrderItemMapper;
 import com.ruoyi.erp.purchase.service.IErpPurchaseInboundService;
+import com.ruoyi.erp.stock.mapper.ErpStockMapper;
 
 /**
  * 采购入库单Service业务层处理
@@ -19,6 +23,12 @@ public class ErpPurchaseInboundServiceImpl implements IErpPurchaseInboundService
 {
     @Autowired
     private ErpPurchaseInboundMapper purchaseInboundMapper;
+
+    @Autowired
+    private ErpPurchaseOrderItemMapper purchaseOrderItemMapper;
+
+    @Autowired
+    private ErpStockMapper stockMapper;
 
     /**
      * 查询采购入库单
@@ -99,12 +109,27 @@ public class ErpPurchaseInboundServiceImpl implements IErpPurchaseInboundService
     }
 
     /**
-     * 完成（审核通过 -> 已完成）
+     * 完成（审核通过 -> 已完成）+ 库存联动
      */
     @Override
+    @Transactional
     public int completeErpPurchaseInbound(Long inboundId)
     {
-        return updateStatus(inboundId, "4");
+        ErpPurchaseInbound inbound = purchaseInboundMapper.selectErpPurchaseInboundById(inboundId);
+        if ("4".equals(inbound.getStatus()))
+        {
+            return 1;
+        }
+        int rows = updateStatus(inboundId, "4");
+        if (rows > 0 && inbound.getOrderId() != null && inbound.getOrderId() > 0)
+        {
+            List<ErpPurchaseOrderItem> items = purchaseOrderItemMapper.selectErpPurchaseOrderItemByOrderId(inbound.getOrderId());
+            for (ErpPurchaseOrderItem item : items)
+            {
+                stockMapper.insertOrAddStock(inbound.getWarehouseId(), item.getMaterialId(), item.getQuantity());
+            }
+        }
+        return rows;
     }
 
     /**

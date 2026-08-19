@@ -38,6 +38,26 @@ public class ErpStock extends BaseEntity
     @Excel(name = "仓库名称")
     private String warehouseName;
 
+    /** 安全库存（关联查询） */
+    @Excel(name = "安全库存")
+    private java.math.BigDecimal safeStock;
+
+    /** 计量单位（关联查询） */
+    @Excel(name = "计量单位")
+    private String unit;
+
+    /** 采购单价（关联查询） */
+    @Excel(name = "采购单价")
+    private java.math.BigDecimal purchasePrice;
+
+    /** 规格型号（关联查询） */
+    @Excel(name = "规格型号")
+    private String specification;
+
+    /** 库存金额（关联计算） */
+    @Excel(name = "库存金额")
+    private java.math.BigDecimal amount;
+
     public void setStockId(Long stockId)
     {
         this.stockId = stockId;
@@ -108,6 +128,56 @@ public class ErpStock extends BaseEntity
         return warehouseName;
     }
 
+    public void setSafeStock(java.math.BigDecimal safeStock)
+    {
+        this.safeStock = safeStock;
+    }
+
+    public java.math.BigDecimal getSafeStock()
+    {
+        return safeStock;
+    }
+
+    public void setUnit(String unit)
+    {
+        this.unit = unit;
+    }
+
+    public String getUnit()
+    {
+        return unit;
+    }
+
+    public void setPurchasePrice(java.math.BigDecimal purchasePrice)
+    {
+        this.purchasePrice = purchasePrice;
+    }
+
+    public java.math.BigDecimal getPurchasePrice()
+    {
+        return purchasePrice;
+    }
+
+    public void setSpecification(String specification)
+    {
+        this.specification = specification;
+    }
+
+    public String getSpecification()
+    {
+        return specification;
+    }
+
+    public void setAmount(java.math.BigDecimal amount)
+    {
+        this.amount = amount;
+    }
+
+    public java.math.BigDecimal getAmount()
+    {
+        return amount;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -118,6 +188,11 @@ public class ErpStock extends BaseEntity
             .append("materialCode", getMaterialCode())
             .append("materialName", getMaterialName())
             .append("warehouseName", getWarehouseName())
+            .append("safeStock", getSafeStock())
+            .append("unit", getUnit())
+            .append("purchasePrice", getPurchasePrice())
+            .append("specification", getSpecification())
+            .append("amount", getAmount())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())
             .append("updateBy", getUpdateBy())
