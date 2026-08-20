@@ -39,18 +39,53 @@ spring:
                 - Path=/schedule/**
               filters:
                 - StripPrefix=1
-            # 办公自动化模块
-            - id: ruoyi-oa
-              uri: lb://ruoyi-oa
+            # ERP 基础资料
+            - id: ruoyi-erp-base
+              uri: lb://ruoyi-erp-base
               predicates:
-                - Path=/oa/**
+                - Path=/erp/material/**,/erp/supplier/**,/erp/customer/**,/erp/warehouse/**
               filters:
                 - StripPrefix=1
-            # ERP模块
-            - id: ruoyi-erp
-              uri: lb://ruoyi-erp
+            # ERP 采购
+            - id: ruoyi-erp-purchase
+              uri: lb://ruoyi-erp-purchase
               predicates:
-                - Path=/erp/**
+                - Path=/erp/purchase/**
+              filters:
+                - StripPrefix=1
+            # ERP 销售
+            - id: ruoyi-erp-sale
+              uri: lb://ruoyi-erp-sale
+              predicates:
+                - Path=/erp/sale/**
+              filters:
+                - StripPrefix=1
+            # ERP 库存
+            - id: ruoyi-erp-stock
+              uri: lb://ruoyi-erp-stock
+              predicates:
+                - Path=/erp/stock/**
+              filters:
+                - StripPrefix=1
+            # ERP 财务
+            - id: ruoyi-erp-finance
+              uri: lb://ruoyi-erp-finance
+              predicates:
+                - Path=/erp/finance/**
+              filters:
+                - StripPrefix=1
+            # ERP 生产
+            - id: ruoyi-erp-production
+              uri: lb://ruoyi-erp-production
+              predicates:
+                - Path=/erp/production/**
+              filters:
+                - StripPrefix=1
+            # ERP 报表 + 工作台待办
+            - id: ruoyi-erp-report
+              uri: lb://ruoyi-erp-report
+              predicates:
+                - Path=/erp/report/**,/erp/order/**
               filters:
                 - StripPrefix=1
             - id: ruoyi-system

@@ -9,7 +9,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <modules>
-        <module>ruoyi-erp</module>
+        <module>ruoyi-erp-base</module>
+        <module>ruoyi-erp-purchase</module>
+        <module>ruoyi-erp-sale</module>
+        <module>ruoyi-erp-stock</module>
+        <module>ruoyi-erp-finance</module>
+        <module>ruoyi-erp-production</module>
+        <module>ruoyi-erp-report</module>
         <module>ruoyi-system</module>
         <module>ruoyi-gen</module>
         <module>ruoyi-job</module>

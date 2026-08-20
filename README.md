@@ -13,9 +13,10 @@
 ERP 企业管理平台是一套**演示性质**的企业资源计划（ERP）管理系统，覆盖**基础资料、采购、销售、库存、财务、生产**六大核心业务域。项目在开源框架 [RuoYi-Cloud v3.6.8](https://gitee.com/y_project/RuoYi-Cloud)（Spring Boot 4.1.0 / Spring Cloud Alibaba / Vue 2 + Element UI）基础上二次开发。
 
 * 六大业务域完整页面：物料/供应商/客户/仓库、采购订单/入库/退货、销售订单/出库/退货、库存台账/出入库/盘点/调拨、应收/应付/收付款、BOM/生产工单。
+* **微服务化**：ERP 后端按业务域拆分为 7 个微服务（基础资料/采购/销售/库存/财务/生产/报表），共享 `ry-cloud` 单库，网关按前缀路由，前端零改动；跨服务联动（库存调整、应收应付生成）通过 Feign 调用。
 * **单据统一审核流**：全部业务单据（采购/销售/库存/财务/生产）支持「草稿 → 提交审核 → 审核通过 / 驳回 → 完成」的完整状态流转。
 * **报表中心**：采购/销售/库存/利润四大报表，KPI 卡片 + 趋势折线 + 占比饼图 + 排名柱状 + 明细表格。
-* **前后端真实接口**：前端页面与后端微服务（ruoyi-modules-erp）接口完整打通，主从表（采购/销售订单、BOM）与单头单据（入库/出库/退货）字段对齐。
+* **前后端真实接口**：前端页面与后端 ERP 微服务接口完整打通，主从表（采购/销售订单、BOM）与单头单据（入库/出库/退货）字段对齐。
 * **库存联动**：采购入库、销售出库、库存调拨单据「完成」后自动更新库存台账（入库加库存、出库减库存、调拨两仓增减），库存不足自动拦截。
 * **AI 智能助手**：对话式经营助手，支持销售/采购/利润/库存分析、库存预警、待审汇总、订单草稿生成（规则 Mock 意图引擎，回复中的经营数字取自真实报表接口，不接入任何真实 AI 服务）。
 * ERP 工作台首页：经营统计卡片、待审单据（与各单据模块联动、可点击直达）、库存预警、经营趋势图表。
@@ -97,7 +98,7 @@ ERP 企业管理平台是一套**演示性质**的企业资源计划（ERP）管
 
 1. 导入数据库脚本（先建库 `ry-cloud`）：`sql/ry_20260417.sql`、`sql/ry_config_20260611.sql`、`sql/ry_erp_20260818.sql`、`sql/ry_erp_20260819.sql`，最后导入演示数据 `sql/ry_erp_seed_20260819.sql`。
 2. 启动 Nacos（3.0.2，默认端口 8848）。
-3. 依次启动后端微服务：`ruoyi-gateway`(8000) → `ruoyi-auth` → `ruoyi-modules-system` → `ruoyi-modules-job` → `ruoyi-modules-erp`(9202) 等。
+3. 依次启动后端微服务：`ruoyi-gateway`(8000) → `ruoyi-auth` → `ruoyi-modules-system` → `ruoyi-modules-job` → 7 个 ERP 业务微服务（`ruoyi-modules-erp-base/purchase/sale/stock/finance/production/report`，端口 9203-9209）。
 4. 前端：`cd ruoyi-ui && npm install && npm run dev`（默认端口 80，若被系统保留端口占用会回退到 8081，代理指向网关 8000）。
 
 详细说明见 [docs/本地开发环境配置.md](docs/本地开发环境配置.md)。
@@ -112,7 +113,13 @@ ruoyi-ui/                  # 前端（Vue 2 + Element UI）
 ruoyi-gateway/             # 网关（端口 8000）
 ruoyi-auth/                # 认证中心
 ruoyi-modules-system/      # 系统模块
-ruoyi-modules-erp/         # ERP 业务模块（端口 9202）
+ruoyi-modules-erp-base/    # ERP 基础资料（9203）
+ruoyi-modules-erp-purchase/# ERP 采购（9204）
+ruoyi-modules-erp-sale/    # ERP 销售（9205）
+ruoyi-modules-erp-stock/   # ERP 库存（9206）
+ruoyi-modules-erp-finance/ # ERP 财务（9207）
+ruoyi-modules-erp-production/ # ERP 生产（9208）
+ruoyi-modules-erp-report/  # ERP 报表 + 工作台待办（9209）
 sql/                       # 数据库脚本（含 ERP 业务表/菜单/字典/报表中心/演示种子数据）
 scripts/                   # 一键脚本（setup-db / start-all / stop-all）
 docs/                      # 本地开发环境配置文档 + 界面截图
