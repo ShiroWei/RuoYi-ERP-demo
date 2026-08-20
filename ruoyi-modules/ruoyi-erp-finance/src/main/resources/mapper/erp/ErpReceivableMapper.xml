@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.finance.mapper.ErpReceivableMapper">
+
+    <resultMap type="ErpReceivable" id="ErpReceivableResult">
+        <result property="receivableId"   column="receivable_id"   />
+        <result property="billNo"         column="bill_no"         />
+        <result property="billType"       column="bill_type"       />
+        <result property="customerId"     column="customer_id"     />
+        <result property="amount"         column="amount"          />
+        <result property="receivedAmount" column="received_amount" />
+        <result property="balance"        column="balance"         />
+        <result property="dueDate"        column="due_date"        />
+        <result property="status"         column="status"          />
+        <result property="customerName"   column="customer_name"   />
+        <result property="createBy"       column="create_by"       />
+        <result property="createTime"     column="create_time"     />
+        <result property="updateBy"       column="update_by"       />
+        <result property="updateTime"     column="update_time"     />
+    </resultMap>
+
+    <sql id="selectErpReceivableVo">
+        select r.receivable_id, r.bill_no, r.bill_type, r.customer_id, r.amount,
+               r.received_amount, r.balance, r.due_date, r.status,
+               c.customer_name,
+               r.create_by, r.create_time, r.update_by, r.update_time
+        from erp_receivable r
+        left join erp_customer c on c.customer_id = r.customer_id
+    </sql>
+
+    <select id="selectErpReceivableList" parameterType="ErpReceivable" resultMap="ErpReceivableResult">
+        <include refid="selectErpReceivableVo"/>
+        <where>
+            <if test="billNo != null and billNo != ''"> and r.bill_no = #{billNo}</if>
+            <if test="billType != null and billType != ''"> and r.bill_type = #{billType}</if>
+            <if test="customerId != null"> and r.customer_id = #{customerId}</if>
+            <if test="status != null and status != ''"> and r.status = #{status}</if>
+            <if test="customerName != null and customerName != ''"> and c.customer_name like concat('%', #{customerName}, '%')</if>
+        </where>
+        order by r.receivable_id desc
+    </select>
+
+    <select id="selectErpReceivableById" parameterType="Long" resultMap="ErpReceivableResult">
+        <include refid="selectErpReceivableVo"/>
+        where r.receivable_id = #{receivableId}
+    </select>
+
+    <insert id="insertErpReceivable" parameterType="ErpReceivable" useGeneratedKeys="true" keyProperty="receivableId">
+        insert into erp_receivable
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="billNo != null">bill_no,</if>
+            <if test="billType != null">bill_type,</if>
+            <if test="customerId != null">customer_id,</if>
+            <if test="amount != null">amount,</if>
+            <if test="receivedAmount != null">received_amount,</if>
+            <if test="balance != null">balance,</if>
+            <if test="dueDate != null">due_date,</if>
+            <if test="status != null">status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="billNo != null">#{billNo},</if>
+            <if test="billType != null">#{billType},</if>
+            <if test="customerId != null">#{customerId},</if>
+            <if test="amount != null">#{amount},</if>
+            <if test="receivedAmount != null">#{receivedAmount},</if>
+            <if test="balance != null">#{balance},</if>
+            <if test="dueDate != null">#{dueDate},</if>
+            <if test="status != null">#{status},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateErpReceivable" parameterType="ErpReceivable">
+        update erp_receivable
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="billNo != null">bill_no = #{billNo},</if>
+            <if test="billType != null">bill_type = #{billType},</if>
+            <if test="customerId != null">customer_id = #{customerId},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="receivedAmount != null">received_amount = #{receivedAmount},</if>
+            <if test="balance != null">balance = #{balance},</if>
+            <if test="dueDate != null">due_date = #{dueDate},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where receivable_id = #{receivableId}
+    </update>
+
+    <delete id="deleteErpReceivableById" parameterType="Long">
+        delete from erp_receivable where receivable_id = #{receivableId}
+    </delete>
+
+</mapper>
