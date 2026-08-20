@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.production.mapper.ErpBomMapper">
+
+    <resultMap type="ErpBom" id="ErpBomResult">
+        <result property="bomId"        column="bom_id"        />
+        <result property="bomNo"        column="bom_no"        />
+        <result property="productId"    column="product_id"    />
+        <result property="productCode"  column="product_code"  />
+        <result property="productName"  column="product_name"  />
+        <result property="unit"         column="unit"          />
+        <result property="status"       column="status"        />
+        <result property="remark"       column="remark"        />
+        <result property="createBy"     column="create_by"     />
+        <result property="createTime"   column="create_time"   />
+        <result property="updateBy"     column="update_by"     />
+        <result property="updateTime"   column="update_time"   />
+    </resultMap>
+
+    <sql id="selectErpBomVo">
+        select bom_id, bom_no, product_id, product_code, product_name, unit,
+               status, remark, create_by, create_time, update_by, update_time
+        from erp_bom
+    </sql>
+
+    <select id="selectErpBomList" parameterType="ErpBom" resultMap="ErpBomResult">
+        <include refid="selectErpBomVo"/>
+        <where>
+            <if test="bomNo != null and bomNo != ''"> and bom_no = #{bomNo}</if>
+            <if test="productId != null"> and product_id = #{productId}</if>
+            <if test="productCode != null and productCode != ''"> and product_code like concat('%', #{productCode}, '%')</if>
+            <if test="productName != null and productName != ''"> and product_name like concat('%', #{productName}, '%')</if>
+            <if test="status != null and status != ''"> and status = #{status}</if>
+        </where>
+        order by bom_id desc
+    </select>
+
+    <select id="selectErpBomById" parameterType="Long" resultMap="ErpBomResult">
+        <include refid="selectErpBomVo"/>
+        where bom_id = #{bomId}
+    </select>
+
+    <insert id="insertErpBom" parameterType="ErpBom" useGeneratedKeys="true" keyProperty="bomId">
+        insert into erp_bom
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="bomNo != null">bom_no,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="productCode != null">product_code,</if>
+            <if test="productName != null">product_name,</if>
+            <if test="unit != null">unit,</if>
+            <if test="status != null">status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="bomNo != null">#{bomNo},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="productCode != null">#{productCode},</if>
+            <if test="productName != null">#{productName},</if>
+            <if test="unit != null">#{unit},</if>
+            <if test="status != null">#{status},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateErpBom" parameterType="ErpBom">
+        update erp_bom
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="bomNo != null">bom_no = #{bomNo},</if>
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="productCode != null">product_code = #{productCode},</if>
+            <if test="productName != null">product_name = #{productName},</if>
+            <if test="unit != null">unit = #{unit},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where bom_id = #{bomId}
+    </update>
+
+    <delete id="deleteErpBomById" parameterType="Long">
+        delete from erp_bom where bom_id = #{bomId}
+    </delete>
+
+</mapper>
