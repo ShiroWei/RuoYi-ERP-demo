@@ -22,6 +22,38 @@ ERP 企业管理平台是一套**演示性质**的企业资源计划（ERP）管
 * ERP 工作台首页：经营统计卡片、待审单据（与各单据模块联动、可点击直达）、库存预警、经营趋势图表。
 * 配套 SQL 脚本：22 张业务表 DDL、ERP 菜单、字典、角色授权、演示种子数据（档案 + 全流程示例单据），一键导入；另附一键启动/停止脚本。
 
+## 系统架构
+
+```mermaid
+flowchart LR
+    U[浏览器前端 ruoyi-ui :80] -->|/dev-api 代理| GW[网关 ruoyi-gateway :8000]
+    GW -->|/auth/**| A[认证中心 ruoyi-auth :9200]
+    GW -->|/system/**| SYS[系统模块 :9201]
+    GW -->|/erp/material|surp|customer|warehouse/**| B[基础资料 :9217]
+    GW -->|/erp/purchase/**| P[采购 :9218]
+    GW -->|/erp/sale/**| SA[销售 :9219]
+    GW -->|/erp/stock/**| ST[库存 :9220]
+    GW -->|/erp/finance/**| F[财务 :9221]
+    GW -->|/erp/production/**| PR[生产 :9222]
+    GW -->|/erp/report/**,/erp/order/**| R[报表+待办 :9223]
+    P -.Feign 调整库存.-> ST
+    P -.Feign 生成应付.-> F
+    SA -.Feign 调整库存.-> ST
+    SA -.Feign 生成应收.-> F
+    PR -.Feign 领料/完工入库.-> ST
+    B & P & SA & ST & F & PR & R --> DB[(MySQL ry-cloud 共享单库)]
+```
+
+- 全部 ERP 服务共享 `ry-cloud` 单库；报表服务跨表只读直查，跨服务写操作（库存调整、应收应付生成）通过 **Feign** 远程调用。
+- 服务注册与配置中心：Nacos（8848），网关按路径前缀路由并透传登录 Token。
+
+## 核心业务流程
+
+- **单据审核流**：`草稿(0) → 待审核(1) → 审核通过(2) / 已驳回(3) → 已完成(4)`，仅草稿/已驳回可编辑删除。
+- **库存联动**：采购入库、销售出库完成时调用库存服务增减库存（出库库存不足自动拦截）；采购/销售退货完成时反向联动；库存调拨完成时两仓增减；生产工单「已完工」时按 BOM 领料并入库成品。
+- **应收/应付自动生成**：销售订单、采购订单完成时调用财务服务自动生成应收/应付（按单号幂等）。
+- **AI 智能助手**：规则 Mock 意图引擎，回复中的经营数字取自真实报表接口，不接入真实 AI 服务。
+
 ## 功能特性
 
 | 业务域 | 功能模块 | 说明 |
@@ -98,7 +130,7 @@ ERP 企业管理平台是一套**演示性质**的企业资源计划（ERP）管
 
 1. 导入数据库脚本（先建库 `ry-cloud`）：`sql/ry_20260417.sql`、`sql/ry_config_20260611.sql`、`sql/ry_erp_20260818.sql`、`sql/ry_erp_20260819.sql`，最后导入演示数据 `sql/ry_erp_seed_20260819.sql`。
 2. 启动 Nacos（3.0.2，默认端口 8848）。
-3. 依次启动后端微服务：`ruoyi-gateway`(8000) → `ruoyi-auth` → `ruoyi-modules-system` → `ruoyi-modules-job` → 7 个 ERP 业务微服务（`ruoyi-modules-erp-base/purchase/sale/stock/finance/production/report`，端口 9203-9209）。
+3. 依次启动后端微服务：`ruoyi-gateway`(8000) → `ruoyi-auth` → `ruoyi-modules-system` → `ruoyi-modules-job` → 7 个 ERP 业务微服务（`ruoyi-modules-erp-base/purchase/sale/stock/finance/production/report`，端口 9217-9223）。
 4. 前端：`cd ruoyi-ui && npm install && npm run dev`（默认端口 80，若被系统保留端口占用会回退到 8081，代理指向网关 8000）。
 
 详细说明见 [docs/本地开发环境配置.md](docs/本地开发环境配置.md)。
@@ -113,13 +145,13 @@ ruoyi-ui/                  # 前端（Vue 2 + Element UI）
 ruoyi-gateway/             # 网关（端口 8000）
 ruoyi-auth/                # 认证中心
 ruoyi-modules-system/      # 系统模块
-ruoyi-modules-erp-base/    # ERP 基础资料（9203）
-ruoyi-modules-erp-purchase/# ERP 采购（9204）
-ruoyi-modules-erp-sale/    # ERP 销售（9205）
-ruoyi-modules-erp-stock/   # ERP 库存（9206）
-ruoyi-modules-erp-finance/ # ERP 财务（9207）
-ruoyi-modules-erp-production/ # ERP 生产（9208）
-ruoyi-modules-erp-report/  # ERP 报表 + 工作台待办（9209）
+ruoyi-modules-erp-base/    # ERP 基础资料（9217）
+ruoyi-modules-erp-purchase/# ERP 采购（9218）
+ruoyi-modules-erp-sale/    # ERP 销售（9219）
+ruoyi-modules-erp-stock/   # ERP 库存（9220）
+ruoyi-modules-erp-finance/ # ERP 财务（9221）
+ruoyi-modules-erp-production/ # ERP 生产（9222）
+ruoyi-modules-erp-report/  # ERP 报表 + 工作台待办（9223）
 sql/                       # 数据库脚本（含 ERP 业务表/菜单/字典/报表中心/演示种子数据）
 scripts/                   # 一键脚本（setup-db / start-all / stop-all）
 docs/                      # 本地开发环境配置文档 + 界面截图

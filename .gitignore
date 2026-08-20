@@ -44,6 +44,9 @@ nbdist/
 # Local runtime artifacts
 /scripts/backup/
 
+# Internal docs (not to be published)
+docs/INTERNAL.md
+
 !*/build/*.java
 !*/build/*.html
 !*/build/*.xml
