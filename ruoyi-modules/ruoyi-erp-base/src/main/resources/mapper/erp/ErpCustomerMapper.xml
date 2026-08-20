@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.base.mapper.ErpCustomerMapper">
+
+    <resultMap type="ErpCustomer" id="ErpCustomerResult">
+        <result property="customerId"    column="customer_id"    />
+        <result property="customerCode"  column="customer_code"  />
+        <result property="customerName"  column="customer_name"  />
+        <result property="customerType"  column="customer_type"  />
+        <result property="customerLevel" column="customer_level" />
+        <result property="contactPerson" column="contact_person" />
+        <result property="phone"         column="phone"         />
+        <result property="email"         column="email"         />
+        <result property="address"       column="address"       />
+        <result property="creditLimit"   column="credit_limit"   />
+        <result property="status"        column="status"        />
+        <result property="remark"        column="remark"        />
+        <result property="createBy"      column="create_by"      />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"      column="update_by"      />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectErpCustomerVo">
+        select customer_id, customer_code, customer_name, customer_type, customer_level,
+               contact_person, phone, email, address, credit_limit, status, remark, create_by,
+               create_time, update_by, update_time
+        from erp_customer
+    </sql>
+
+    <select id="selectErpCustomerList" parameterType="ErpCustomer" resultMap="ErpCustomerResult">
+        <include refid="selectErpCustomerVo"/>
+        <where>
+            <if test="customerCode != null and customerCode != ''"> and customer_code like concat('%', #{customerCode}, '%')</if>
+            <if test="customerName != null and customerName != ''"> and customer_name like concat('%', #{customerName}, '%')</if>
+            <if test="customerType != null and customerType != ''"> and customer_type = #{customerType}</if>
+            <if test="customerLevel != null and customerLevel != ''"> and customer_level = #{customerLevel}</if>
+            <if test="status != null and status != ''"> and status = #{status}</if>
+        </where>
+        order by customer_id desc
+    </select>
+
+    <select id="selectErpCustomerById" parameterType="Long" resultMap="ErpCustomerResult">
+        <include refid="selectErpCustomerVo"/>
+        where customer_id = #{customerId}
+    </select>
+
+    <insert id="insertErpCustomer" parameterType="ErpCustomer" useGeneratedKeys="true" keyProperty="customerId">
+        insert into erp_customer
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="customerCode != null">customer_code,</if>
+            <if test="customerName != null">customer_name,</if>
+            <if test="customerType != null">customer_type,</if>
+            <if test="customerLevel != null">customer_level,</if>
+            <if test="contactPerson != null">contact_person,</if>
+            <if test="phone != null">phone,</if>
+            <if test="email != null">email,</if>
+            <if test="address != null">address,</if>
+            <if test="creditLimit != null">credit_limit,</if>
+            <if test="status != null">status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="customerCode != null">#{customerCode},</if>
+            <if test="customerName != null">#{customerName},</if>
+            <if test="customerType != null">#{customerType},</if>
+            <if test="customerLevel != null">#{customerLevel},</if>
+            <if test="contactPerson != null">#{contactPerson},</if>
+            <if test="phone != null">#{phone},</if>
+            <if test="email != null">#{email},</if>
+            <if test="address != null">#{address},</if>
+            <if test="creditLimit != null">#{creditLimit},</if>
+            <if test="status != null">#{status},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateErpCustomer" parameterType="ErpCustomer">
+        update erp_customer
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="customerCode != null">customer_code = #{customerCode},</if>
+            <if test="customerName != null">customer_name = #{customerName},</if>
+            <if test="customerType != null">customer_type = #{customerType},</if>
+            <if test="customerLevel != null">customer_level = #{customerLevel},</if>
+            <if test="contactPerson != null">contact_person = #{contactPerson},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="address != null">address = #{address},</if>
+            <if test="creditLimit != null">credit_limit = #{creditLimit},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where customer_id = #{customerId}
+    </update>
+
+    <delete id="deleteErpCustomerById" parameterType="Long">
+        delete from erp_customer where customer_id = #{customerId}
+    </delete>
+</mapper>
