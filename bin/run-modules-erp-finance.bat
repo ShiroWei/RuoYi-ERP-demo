@@ -1,6 +1,6 @@
 @echo off
 echo.
-echo [ERP-FINANCE] Starting ruoyi-modules-erp-finance (port 9207) ...
+echo [ERP-FINANCE] Starting ruoyi-modules-erp-finance (port 9221) ...
 echo.
 
 cd %~dp0

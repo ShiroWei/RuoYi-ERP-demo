@@ -1,6 +1,6 @@
 @echo off
 echo.
-echo [ERP-STOCK] Starting ruoyi-modules-erp-stock (port 9206) ...
+echo [ERP-STOCK] Starting ruoyi-modules-erp-stock (port 9220) ...
 echo.
 
 cd %~dp0
