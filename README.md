@@ -29,7 +29,7 @@ flowchart LR
     U[浏览器前端 ruoyi-ui :80] -->|/dev-api 代理| GW[网关 ruoyi-gateway :8000]
     GW -->|/auth/**| A[认证中心 ruoyi-auth :9200]
     GW -->|/system/**| SYS[系统模块 :9201]
-    GW -->|/erp/material|surp|customer|warehouse/**| B[基础资料 :9217]
+    GW -->|"/erp/material, supplier, customer, warehouse/**"| B[基础资料 :9217]
     GW -->|/erp/purchase/**| P[采购 :9218]
     GW -->|/erp/sale/**| SA[销售 :9219]
     GW -->|/erp/stock/**| ST[库存 :9220]
