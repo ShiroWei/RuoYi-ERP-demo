@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.erp.sale.mapper.ErpSaleReturnMapper">
+
+    <resultMap type="ErpSaleReturn" id="ErpSaleReturnResult">
+        <result property="returnId"      column="return_id"      />
+        <result property="returnNo"      column="return_no"      />
+        <result property="orderId"       column="order_id"       />
+        <result property="orderNo"       column="order_no"       />
+        <result property="customerId"    column="customer_id"    />
+        <result property="customerName"  column="customer_name"  />
+        <result property="warehouseId"   column="warehouse_id"   />
+        <result property="warehouseName" column="warehouse_name" />
+        <result property="returnDate"    column="return_date"    />
+        <result property="totalAmount"   column="total_amount"   />
+        <result property="status"        column="status"        />
+        <result property="reason"        column="reason"        />
+        <result property="remark"        column="remark"        />
+        <result property="createBy"      column="create_by"      />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"      column="update_by"      />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectErpSaleReturnVo">
+        select pr.return_id, pr.return_no, pr.order_id, po.order_no, pr.customer_id,
+               su.customer_name, pr.warehouse_id, wh.warehouse_name, pr.return_date,
+               pr.total_amount, pr.status, pr.reason, pr.remark, pr.create_by, pr.create_time,
+               pr.update_by, pr.update_time
+        from erp_sale_return pr
+        left join erp_sale_order po on po.order_id = pr.order_id
+        left join erp_customer su on su.customer_id = pr.customer_id
+        left join erp_warehouse wh on wh.warehouse_id = pr.warehouse_id
+    </sql>
+
+    <select id="selectErpSaleReturnList" parameterType="ErpSaleReturn" resultMap="ErpSaleReturnResult">
+        <include refid="selectErpSaleReturnVo"/>
+        <where>
+            <if test="returnNo != null and returnNo != ''"> and pr.return_no like concat('%', #{returnNo}, '%')</if>
+            <if test="customerName != null and customerName != ''"> and su.customer_name like concat('%', #{customerName}, '%')</if>
+            <if test="status != null and status != ''"> and pr.status = #{status}</if>
+        </where>
+        order by pr.return_id desc
+    </select>
+
+    <select id="selectErpSaleReturnById" parameterType="Long" resultMap="ErpSaleReturnResult">
+        <include refid="selectErpSaleReturnVo"/>
+        where pr.return_id = #{returnId}
+    </select>
+
+    <insert id="insertErpSaleReturn" parameterType="ErpSaleReturn" useGeneratedKeys="true" keyProperty="returnId">
+        insert into erp_sale_return
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="returnNo != null">return_no,</if>
+            <if test="orderId != null">order_id,</if>
+            <if test="customerId != null">customer_id,</if>
+            <if test="warehouseId != null">warehouse_id,</if>
+            <if test="returnDate != null">return_date,</if>
+            <if test="totalAmount != null">total_amount,</if>
+            <if test="status != null">status,</if>
+            <if test="reason != null">reason,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="returnNo != null">#{returnNo},</if>
+            <if test="orderId != null">#{orderId},</if>
+            <if test="customerId != null">#{customerId},</if>
+            <if test="warehouseId != null">#{warehouseId},</if>
+            <if test="returnDate != null">#{returnDate},</if>
+            <if test="totalAmount != null">#{totalAmount},</if>
+            <if test="status != null">#{status},</if>
+            <if test="reason != null">#{reason},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateErpSaleReturn" parameterType="ErpSaleReturn">
+        update erp_sale_return
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="returnNo != null">return_no = #{returnNo},</if>
+            <if test="orderId != null">order_id = #{orderId},</if>
+            <if test="customerId != null">customer_id = #{customerId},</if>
+            <if test="warehouseId != null">warehouse_id = #{warehouseId},</if>
+            <if test="returnDate != null">return_date = #{returnDate},</if>
+            <if test="totalAmount != null">total_amount = #{totalAmount},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="reason != null">reason = #{reason},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where return_id = #{returnId}
+    </update>
+
+    <delete id="deleteErpSaleReturnById" parameterType="Long">
+        delete from erp_sale_return where return_id = #{returnId}
+    </delete>
+</mapper>
