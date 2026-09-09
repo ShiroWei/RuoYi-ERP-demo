@@ -46,6 +46,7 @@ nbdist/
 
 # Internal docs (not to be published)
 docs/INTERNAL.md
+docs/源码笔记/
 
 !*/build/*.java
 !*/build/*.html
