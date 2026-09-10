@@ -8,10 +8,14 @@ import com.ruoyi.common.core.exception.ServiceException;
 import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.erp.purchase.domain.ErpPurchaseOrderItem;
+import com.ruoyi.erp.purchase.domain.ErpPurchaseInbound;
+import com.ruoyi.erp.purchase.domain.ErpPurchaseOrder;
 import com.ruoyi.erp.purchase.domain.ErpPurchaseReturn;
 import com.ruoyi.erp.purchase.feign.StockAdjustReq;
 import com.ruoyi.erp.purchase.feign.StockFeignClient;
 import com.ruoyi.erp.purchase.mapper.ErpPurchaseOrderItemMapper;
+import com.ruoyi.erp.purchase.mapper.ErpPurchaseInboundMapper;
+import com.ruoyi.erp.purchase.mapper.ErpPurchaseOrderMapper;
 import com.ruoyi.erp.purchase.mapper.ErpPurchaseReturnMapper;
 import com.ruoyi.erp.purchase.service.IErpPurchaseReturnService;
 
@@ -28,6 +32,12 @@ public class ErpPurchaseReturnServiceImpl implements IErpPurchaseReturnService
 
     @Autowired
     private ErpPurchaseOrderItemMapper purchaseOrderItemMapper;
+
+    @Autowired
+    private ErpPurchaseInboundMapper purchaseInboundMapper;
+
+    @Autowired
+    private ErpPurchaseOrderMapper purchaseOrderMapper;
 
     @Autowired
     private StockFeignClient stockFeignClient;
@@ -56,6 +66,8 @@ public class ErpPurchaseReturnServiceImpl implements IErpPurchaseReturnService
     @Override
     public int insertErpPurchaseReturn(ErpPurchaseReturn erpPurchaseReturn)
     {
+        fillAndValidateSource(erpPurchaseReturn);
+        validateOrderNotReturned(erpPurchaseReturn);
         erpPurchaseReturn.setReturnNo(generateReturnNo());
         erpPurchaseReturn.setStatus("0");
         erpPurchaseReturn.setCreateBy(SecurityUtils.getUsername());
@@ -69,9 +81,46 @@ public class ErpPurchaseReturnServiceImpl implements IErpPurchaseReturnService
     @Override
     public int updateErpPurchaseReturn(ErpPurchaseReturn erpPurchaseReturn)
     {
+        fillAndValidateSource(erpPurchaseReturn);
+        validateOrderNotReturned(erpPurchaseReturn);
         erpPurchaseReturn.setUpdateBy(SecurityUtils.getUsername());
         erpPurchaseReturn.setUpdateTime(DateUtils.getNowDate());
         return purchaseReturnMapper.updateErpPurchaseReturn(erpPurchaseReturn);
+    }
+
+    private void fillAndValidateSource(ErpPurchaseReturn returnOrder)
+    {
+        if (returnOrder.getOrderId() == null || returnOrder.getOrderId() <= 0)
+        {
+            throw new ServiceException("请选择来源采购入库单");
+        }
+        ErpPurchaseInbound query = new ErpPurchaseInbound();
+        query.setOrderId(returnOrder.getOrderId());
+        query.setStatus("4");
+        List<ErpPurchaseInbound> inbounds = purchaseInboundMapper.selectErpPurchaseInboundList(query);
+        if (inbounds == null || inbounds.isEmpty())
+        {
+            throw new ServiceException("关联采购订单尚未完成入库，不能退货");
+        }
+        ErpPurchaseOrder order = purchaseOrderMapper.selectErpPurchaseOrderById(returnOrder.getOrderId());
+        ErpPurchaseInbound inbound = inbounds.get(0);
+        returnOrder.setSupplierId(order.getSupplierId());
+        returnOrder.setWarehouseId(inbound.getWarehouseId());
+        returnOrder.setTotalAmount(inbound.getTotalAmount());
+    }
+
+    private void validateOrderNotReturned(ErpPurchaseReturn returnOrder)
+    {
+        ErpPurchaseReturn query = new ErpPurchaseReturn();
+        query.setOrderId(returnOrder.getOrderId());
+        List<ErpPurchaseReturn> exists = purchaseReturnMapper.selectErpPurchaseReturnList(query);
+        for (ErpPurchaseReturn item : exists)
+        {
+            if (returnOrder.getReturnId() == null || !returnOrder.getReturnId().equals(item.getReturnId()))
+            {
+                throw new ServiceException("该采购订单已经关联退货单，不能重复退货");
+            }
+        }
     }
 
     /**

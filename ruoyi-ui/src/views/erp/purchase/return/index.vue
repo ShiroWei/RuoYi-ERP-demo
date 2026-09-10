@@ -158,14 +158,30 @@
     <!-- 添加或修改采购退货单对话框 -->
     <el-dialog :title="title" :visible.sync="open" width="860px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="90px">
+        <el-form-item label="来源入库单" prop="orderId">
+          <el-select v-model="form.orderId" placeholder="请选择已完成的采购入库单" filterable style="width: 100%" @change="inboundChange">
+            <el-option
+              v-for="item in inboundOptions"
+              :key="item.inboundId"
+              :label="item.inboundNo + ' / ' + item.orderNo + ' / ' + item.supplierName + ' / ' + item.warehouseName"
+              :value="item.orderId"
+            />
+          </el-select>
+        </el-form-item>
         <el-row>
           <el-col :span="12">
             <el-form-item label="供应商" prop="supplierName">
-              <el-select v-model="form.supplierName" placeholder="请选择供应商" filterable style="width: 100%" @change="supplierChange">
-                <el-option v-for="item in supplierOptions" :key="item.supplierId" :label="item.supplierName" :value="item.supplierName" />
+              <el-input v-model="form.supplierName" disabled placeholder="选择来源入库单后自动回填" />
               </el-select>
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="退货仓库" prop="warehouseName">
+              <el-input v-model="form.warehouseName" disabled placeholder="选择来源入库单后自动回填" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
           <el-col :span="12">
             <el-form-item label="退货日期" prop="returnDate">
               <el-date-picker v-model="form.returnDate" type="date" value-format="yyyy-MM-dd" placeholder="选择日期" style="width: 100%" />
@@ -175,14 +191,12 @@
         <el-row>
           <el-col :span="12">
             <el-form-item label="退货金额(元)" prop="totalAmount">
-              <el-input-number v-model="form.totalAmount" :min="0" :precision="2" :controls="false" style="width: 100%" />
+              <el-input-number v-model="form.totalAmount" :min="0" :precision="2" :controls="false" disabled style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单据状态" prop="status">
-              <el-select v-model="form.status" placeholder="单据状态" style="width: 100%">
-                <el-option v-for="dict in billStatusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
-              </el-select>
+            <el-form-item label="关联订单">
+              <el-input v-model="form.orderNo" disabled />
             </el-form-item>
           </el-col>
         </el-row>
@@ -203,7 +217,9 @@
     <el-dialog title="采购退货单明细" :visible.sync="openDetail" width="760px" append-to-body>
       <el-descriptions :column="2" border size="small">
         <el-descriptions-item label="退货单号">{{ detail.returnNo }}</el-descriptions-item>
+        <el-descriptions-item label="关联订单">{{ detail.orderNo }}</el-descriptions-item>
         <el-descriptions-item label="供应商">{{ detail.supplierName }}</el-descriptions-item>
+        <el-descriptions-item label="退货仓库">{{ detail.warehouseName }}</el-descriptions-item>
         <el-descriptions-item label="退货日期">{{ detail.returnDate }}</el-descriptions-item>
         <el-descriptions-item label="单据状态">
           <dict-tag :options="billStatusOptions" :value="detail.status"/>
@@ -217,8 +233,7 @@
 </template>
 
 <script>
-import { listPurchaseReturn, getPurchaseReturn, delPurchaseReturn, addPurchaseReturn, updatePurchaseReturn, submitPurchaseReturn, approvePurchaseReturn, rejectPurchaseReturn, completePurchaseReturn } from "@/api/erp/purchase"
-import { listSupplier } from "@/api/erp/base"
+import { listPurchaseInbound, listPurchaseReturn, getPurchaseReturn, delPurchaseReturn, addPurchaseReturn, updatePurchaseReturn, submitPurchaseReturn, approvePurchaseReturn, rejectPurchaseReturn, completePurchaseReturn } from "@/api/erp/purchase"
 
 export default {
   name: "PurchaseReturn",
@@ -255,8 +270,8 @@ export default {
         { value: '3', label: '已驳回', tagType: 'danger' },
         { value: '4', label: '已完成', tagType: 'success' }
       ],
-      // 供应商选项（接入真实接口后动态加载）
-      supplierOptions: [],
+      // 可退货的已完成采购入库单
+      inboundOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -269,33 +284,45 @@ export default {
       form: {},
       // 表单校验
       rules: {
+        orderId: [
+          { required: true, message: "来源入库单不能为空", trigger: "change" }
+        ],
         supplierName: [
           { required: true, message: "供应商不能为空", trigger: "change" }
         ],
         returnDate: [
           { required: true, message: "退货日期不能为空", trigger: "change" }
         ],
-        status: [
-          { required: true, message: "单据状态不能为空", trigger: "change" }
-        ]
       }
     }
   },
   created() {
     this.getList()
-    this.loadSupplier()
+    this.loadInbound()
   },
   methods: {
-    /** 加载供应商下拉 */
-    loadSupplier() {
-      listSupplier({ pageNum: 1, pageSize: 100 }).then(response => {
-        this.supplierOptions = response.rows
+    /** 加载可退货的已完成入库单 */
+    loadInbound() {
+      Promise.all([
+        listPurchaseInbound({ pageNum: 1, pageSize: 100, status: '4' }),
+        listPurchaseReturn({ pageNum: 1, pageSize: 100 })
+      ]).then(([inbound, returned]) => {
+        const used = new Set((returned.rows || []).map(item => item.orderId))
+        this.inboundOptions = (inbound.rows || [])
+          .filter(item => !used.has(item.orderId) || item.orderId === this.form.orderId)
       })
     },
-    /** 选择供应商回填 id */
-    supplierChange() {
-      const s = this.supplierOptions.find(item => item.supplierName === this.form.supplierName)
-      this.form.supplierId = s ? s.supplierId : undefined
+    /** 选择来源入库单后回填退货上下文 */
+    inboundChange(orderId) {
+      const inbound = this.inboundOptions.find(item => item.orderId === orderId)
+      if (inbound) {
+        this.form.orderNo = inbound.orderNo
+        this.form.supplierId = inbound.supplierId
+        this.form.supplierName = inbound.supplierName
+        this.form.warehouseId = inbound.warehouseId
+        this.form.warehouseName = inbound.warehouseName
+        this.form.totalAmount = inbound.totalAmount
+      }
     },
     /** 查询退货单列表 */
     getList() {
@@ -320,6 +347,8 @@ export default {
         orderNo: undefined,
         supplierName: undefined,
         supplierId: undefined,
+        warehouseName: undefined,
+        warehouseId: undefined,
         returnDate: undefined,
         status: "0",
         reason: undefined,
@@ -356,6 +385,19 @@ export default {
       const returnId = row.returnId || this.ids
       getPurchaseReturn(returnId).then(response => {
         this.form = response.data
+        if (!this.inboundOptions.some(item => item.orderId === this.form.orderId)) {
+          this.inboundOptions.push({
+            inboundId: this.form.returnId,
+            inboundNo: '已关联',
+            orderId: this.form.orderId,
+            orderNo: this.form.orderNo,
+            supplierId: this.form.supplierId,
+            supplierName: this.form.supplierName,
+            warehouseId: this.form.warehouseId,
+            warehouseName: this.form.warehouseName,
+            totalAmount: this.form.totalAmount
+          })
+        }
         this.open = true
         this.title = "修改采购退货单"
       })
