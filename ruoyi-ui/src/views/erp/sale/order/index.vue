@@ -220,6 +220,13 @@
               <el-input-number v-model="scope.row.quantity" :min="0" :controls="false" size="mini" style="width: 100%" @change="lineCalc(scope.row)" />
             </template>
           </el-table-column>
+          <el-table-column label="可用库存" width="100" align="center">
+            <template slot-scope="scope">
+              <el-tag :type="Number(scope.row.quantity || 0) > Number(scope.row.availableQty || 0) ? 'danger' : 'success'" size="mini">
+                {{ scope.row.availableQty || 0 }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="单价(元)" min-width="100" align="center">
             <template slot-scope="scope">
               <el-input-number v-model="scope.row.price" :min="0" :precision="2" :controls="false" size="mini" style="width: 100%" @change="lineCalc(scope.row)" />
@@ -275,6 +282,7 @@
 <script>
 import { listSaleOrder, getSaleOrder, delSaleOrder, addSaleOrder, updateSaleOrder, submitSaleOrder, approveSaleOrder, rejectSaleOrder, completeSaleOrder } from "@/api/erp/sale"
 import { listCustomer, listMaterial } from "@/api/erp/base"
+import { listStock } from "@/api/erp/stock"
 
 export default {
   name: "SaleOrder",
@@ -315,6 +323,8 @@ export default {
       customerOptions: [],
       // 物料选项（接入真实接口后动态加载）
       materialOptions: [],
+      // 按物料汇总的全部仓库可用库存
+      stockByMaterial: {},
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -343,6 +353,7 @@ export default {
     this.getList()
     this.loadCustomer()
     this.loadMaterial()
+    this.loadStock()
   },
   methods: {
     /** 加载客户下拉 */
@@ -355,6 +366,16 @@ export default {
     loadMaterial() {
       listMaterial({ pageNum: 1, pageSize: 100 }).then(response => {
         this.materialOptions = response.rows
+      })
+    },
+    /** 加载并按物料汇总全部仓库库存 */
+    loadStock() {
+      listStock({ pageNum: 1, pageSize: 1000 }).then(response => {
+        const stock = {}
+        ;(response.rows || []).forEach(item => {
+          stock[item.materialId] = Number(stock[item.materialId] || 0) + Number(item.quantity || 0)
+        })
+        this.stockByMaterial = stock
       })
     },
     /** 查询销售订单列表 */
@@ -414,6 +435,9 @@ export default {
       const orderId = row.orderId || this.ids
       getSaleOrder(orderId).then(response => {
         this.form = response.data
+        ;(this.form.items || []).forEach(item => {
+          this.$set(item, 'availableQty', Number(this.stockByMaterial[item.materialId] || 0))
+        })
         this.open = true
         this.title = "修改销售订单"
       })
@@ -483,6 +507,7 @@ export default {
         row.materialName = m.materialName
         row.specification = m.specification
         row.unit = m.unit
+        row.availableQty = Number(this.stockByMaterial[m.materialId] || 0)
         row.quantity = row.quantity || 1
         row.price = row.price || undefined
         this.lineCalc(row)
@@ -501,7 +526,7 @@ export default {
     addLine() {
       this.form.items.push({
         itemId: undefined, materialId: undefined, materialCode: undefined, materialName: undefined,
-        specification: undefined, unit: undefined, quantity: undefined, price: undefined, amount: 0
+        specification: undefined, unit: undefined, quantity: undefined, price: undefined, amount: 0, availableQty: 0
       })
     },
     /** 删除明细行 */
@@ -517,20 +542,44 @@ export default {
             this.$modal.msgWarning("请添加销售明细行")
             return
           }
-          if (this.form.orderId != undefined) {
-            updateSaleOrder(this.form).then(() => {
-              this.$modal.msgSuccess("修改成功")
-              this.open = false
-              this.getList()
-            })
-          } else {
-            addSaleOrder(this.form).then(() => {
+          const shortages = this.getStockShortages()
+          const save = () => {
+            if (this.form.orderId != undefined) {
+              return updateSaleOrder(this.form).then(() => {
+                this.$modal.msgSuccess("修改成功")
+                this.open = false
+                this.getList()
+              })
+            }
+            return addSaleOrder(this.form).then(() => {
               this.$modal.msgSuccess("新增成功")
               this.open = false
               this.getList()
             })
           }
+          if (shortages.length) {
+            this.$modal.confirm('以下物料库存不足：' + shortages.join('；') + '。销售订单可以保存，但后续出库时会被严格拦截，是否继续？')
+              .then(save).catch(() => {})
+          } else {
+            save()
+          }
         }
+      })
+    },
+    /** 汇总订单明细后计算库存缺口 */
+    getStockShortages() {
+      const required = {}
+      ;(this.form.items || []).forEach(item => {
+        if (item.materialId) {
+          required[item.materialId] = Number(required[item.materialId] || 0) + Number(item.quantity || 0)
+        }
+      })
+      return Object.keys(required).filter(materialId => {
+        return required[materialId] > Number(this.stockByMaterial[materialId] || 0)
+      }).map(materialId => {
+        const material = this.materialOptions.find(item => String(item.materialId) === String(materialId))
+        const available = Number(this.stockByMaterial[materialId] || 0)
+        return `${material ? material.materialName : '物料' + materialId} 需要 ${required[materialId]}，可用 ${available}`
       })
     },
     /** 删除按钮操作 */
