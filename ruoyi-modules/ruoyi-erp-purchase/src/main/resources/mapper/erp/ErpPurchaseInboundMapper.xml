@@ -38,6 +38,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <include refid="selectErpPurchaseInboundVo"/>
         <where>
             <if test="inboundNo != null and inboundNo != ''"> and pi.inbound_no like concat('%', #{inboundNo}, '%')</if>
+            <if test="orderId != null"> and pi.order_id = #{orderId}</if>
             <if test="supplierName != null and supplierName != ''"> and su.supplier_name like concat('%', #{supplierName}, '%')</if>
             <if test="status != null and status != ''"> and pi.status = #{status}</if>
         </where>

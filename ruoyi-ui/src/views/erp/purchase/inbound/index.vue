@@ -159,11 +159,21 @@
     <!-- 添加或修改采购入库单对话框 -->
     <el-dialog :title="title" :visible.sync="open" width="860px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="90px">
+        <el-form-item label="关联订单" prop="orderId">
+          <el-select v-model="form.orderId" placeholder="请选择已审核的采购订单" filterable style="width: 100%" @change="orderChange">
+            <el-option
+              v-for="item in orderOptions"
+              :key="item.orderId"
+              :label="item.orderNo + ' / ' + item.supplierName + ' / ' + item.totalAmount + ' 元'"
+              :value="item.orderId"
+            />
+          </el-select>
+        </el-form-item>
         <el-row>
           <el-col :span="12">
             <el-form-item label="供应商" prop="supplierName">
-              <el-select v-model="form.supplierName" placeholder="请选择供应商" filterable style="width: 100%" @change="supplierChange">
-                <el-option v-for="item in supplierOptions" :key="item.supplierId" :label="item.supplierName" :value="item.supplierName" />
+              <el-select v-model="form.supplierName" placeholder="选择订单后自动回填" filterable disabled style="width: 100%">
+                <el-option :label="form.supplierName" :value="form.supplierName" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -183,15 +193,10 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="入库金额(元)" prop="totalAmount">
-              <el-input-number v-model="form.totalAmount" :min="0" :precision="2" :controls="false" style="width: 100%" />
+              <el-input-number v-model="form.totalAmount" :min="0" :precision="2" :controls="false" disabled style="width: 100%" />
             </el-form-item>
           </el-col>
         </el-row>
-        <el-form-item label="单据状态" prop="status">
-          <el-select v-model="form.status" placeholder="单据状态" style="width: 100%">
-            <el-option v-for="dict in billStatusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
         </el-form-item>
@@ -206,6 +211,7 @@
     <el-dialog title="采购入库单明细" :visible.sync="openDetail" width="760px" append-to-body>
       <el-descriptions :column="2" border size="small">
         <el-descriptions-item label="入库单号">{{ detail.inboundNo }}</el-descriptions-item>
+        <el-descriptions-item label="关联订单">{{ detail.orderNo }}</el-descriptions-item>
         <el-descriptions-item label="供应商">{{ detail.supplierName }}</el-descriptions-item>
         <el-descriptions-item label="入库仓库">{{ detail.warehouseName }}</el-descriptions-item>
         <el-descriptions-item label="入库日期">{{ detail.inboundDate }}</el-descriptions-item>
@@ -219,8 +225,8 @@
 </template>
 
 <script>
-import { listPurchaseInbound, getPurchaseInbound, delPurchaseInbound, addPurchaseInbound, updatePurchaseInbound, submitPurchaseInbound, approvePurchaseInbound, rejectPurchaseInbound, completePurchaseInbound } from "@/api/erp/purchase"
-import { listSupplier, listWarehouse } from "@/api/erp/base"
+import { listPurchaseOrder, listPurchaseInbound, getPurchaseInbound, delPurchaseInbound, addPurchaseInbound, updatePurchaseInbound, submitPurchaseInbound, approvePurchaseInbound, rejectPurchaseInbound, completePurchaseInbound } from "@/api/erp/purchase"
+import { listWarehouse } from "@/api/erp/base"
 
 export default {
   name: "PurchaseInbound",
@@ -257,10 +263,10 @@ export default {
         { value: '3', label: '已驳回', tagType: 'danger' },
         { value: '4', label: '已完成', tagType: 'success' }
       ],
-      // 供应商选项（接入真实接口后动态加载）
-      supplierOptions: [],
       // 仓库选项（接入真实接口后动态加载）
       warehouseOptions: [],
+      // 可关联的采购订单（审核通过/已完成）
+      orderOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -273,6 +279,9 @@ export default {
       form: {},
       // 表单校验
       rules: {
+        orderId: [
+          { required: true, message: "关联采购订单不能为空", trigger: "change" }
+        ],
         supplierName: [
           { required: true, message: "供应商不能为空", trigger: "change" }
         ],
@@ -282,34 +291,42 @@ export default {
         inboundDate: [
           { required: true, message: "入库日期不能为空", trigger: "change" }
         ],
-        status: [
-          { required: true, message: "单据状态不能为空", trigger: "change" }
-        ]
       }
     }
   },
   created() {
     this.getList()
-    this.loadSupplier()
     this.loadWarehouse()
+    this.loadOrder()
   },
   methods: {
-    /** 加载供应商下拉 */
-    loadSupplier() {
-      listSupplier({ pageNum: 1, pageSize: 100 }).then(response => {
-        this.supplierOptions = response.rows
-      })
-    },
     /** 加载仓库下拉 */
     loadWarehouse() {
       listWarehouse({ pageNum: 1, pageSize: 100 }).then(response => {
         this.warehouseOptions = response.rows
       })
     },
-    /** 选择供应商回填 id */
-    supplierChange() {
-      const s = this.supplierOptions.find(item => item.supplierName === this.form.supplierName)
-      this.form.supplierId = s ? s.supplierId : undefined
+    /** 加载可关联采购订单 */
+    loadOrder() {
+      Promise.all([
+        listPurchaseOrder({ pageNum: 1, pageSize: 100, status: '2' }),
+        listPurchaseOrder({ pageNum: 1, pageSize: 100, status: '4' }),
+        listPurchaseInbound({ pageNum: 1, pageSize: 100 })
+      ]).then(([approved, completed, inbound]) => {
+        const used = new Set((inbound.rows || []).map(item => item.orderId))
+        this.orderOptions = [...(approved.rows || []), ...(completed.rows || [])]
+          .filter(item => !used.has(item.orderId) || item.orderId === this.form.orderId)
+      })
+    },
+    /** 选择订单后回填供应商和金额 */
+    orderChange(orderId) {
+      const order = this.orderOptions.find(item => item.orderId === orderId)
+      if (order) {
+        this.form.orderNo = order.orderNo
+        this.form.supplierId = order.supplierId
+        this.form.supplierName = order.supplierName
+        this.form.totalAmount = order.totalAmount
+      }
     },
     /** 选择仓库回填 id */
     warehouseChange() {
@@ -376,6 +393,15 @@ export default {
       const inboundId = row.inboundId || this.ids
       getPurchaseInbound(inboundId).then(response => {
         this.form = response.data
+        if (!this.orderOptions.some(item => item.orderId === this.form.orderId)) {
+          this.orderOptions.push({
+            orderId: this.form.orderId,
+            orderNo: this.form.orderNo,
+            supplierId: this.form.supplierId,
+            supplierName: this.form.supplierName,
+            totalAmount: this.form.totalAmount
+          })
+        }
         this.open = true
         this.title = "修改采购入库单"
       })

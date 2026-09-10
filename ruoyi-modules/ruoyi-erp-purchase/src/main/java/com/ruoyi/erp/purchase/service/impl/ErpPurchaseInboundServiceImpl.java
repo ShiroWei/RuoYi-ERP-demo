@@ -9,10 +9,12 @@ import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.erp.purchase.domain.ErpPurchaseInbound;
 import com.ruoyi.erp.purchase.domain.ErpPurchaseOrderItem;
+import com.ruoyi.erp.purchase.domain.ErpPurchaseOrder;
 import com.ruoyi.erp.purchase.feign.StockAdjustReq;
 import com.ruoyi.erp.purchase.feign.StockFeignClient;
 import com.ruoyi.erp.purchase.mapper.ErpPurchaseInboundMapper;
 import com.ruoyi.erp.purchase.mapper.ErpPurchaseOrderItemMapper;
+import com.ruoyi.erp.purchase.mapper.ErpPurchaseOrderMapper;
 import com.ruoyi.erp.purchase.service.IErpPurchaseInboundService;
 
 /**
@@ -28,6 +30,9 @@ public class ErpPurchaseInboundServiceImpl implements IErpPurchaseInboundService
 
     @Autowired
     private ErpPurchaseOrderItemMapper purchaseOrderItemMapper;
+
+    @Autowired
+    private ErpPurchaseOrderMapper purchaseOrderMapper;
 
     @Autowired
     private StockFeignClient stockFeignClient;
@@ -56,6 +61,8 @@ public class ErpPurchaseInboundServiceImpl implements IErpPurchaseInboundService
     @Override
     public int insertErpPurchaseInbound(ErpPurchaseInbound erpPurchaseInbound)
     {
+        fillAndValidateOrder(erpPurchaseInbound);
+        validateOrderNotInbound(erpPurchaseInbound);
         erpPurchaseInbound.setInboundNo(generateInboundNo());
         erpPurchaseInbound.setStatus("0");
         erpPurchaseInbound.setCreateBy(SecurityUtils.getUsername());
@@ -69,9 +76,50 @@ public class ErpPurchaseInboundServiceImpl implements IErpPurchaseInboundService
     @Override
     public int updateErpPurchaseInbound(ErpPurchaseInbound erpPurchaseInbound)
     {
+        fillAndValidateOrder(erpPurchaseInbound);
+        validateOrderNotInbound(erpPurchaseInbound);
         erpPurchaseInbound.setUpdateBy(SecurityUtils.getUsername());
         erpPurchaseInbound.setUpdateTime(DateUtils.getNowDate());
         return purchaseInboundMapper.updateErpPurchaseInbound(erpPurchaseInbound);
+    }
+
+    /**
+     * 校验关联采购订单，并以订单数据回填供应商和金额，避免入库单与订单不一致。
+     */
+    private void fillAndValidateOrder(ErpPurchaseInbound inbound)
+    {
+        if (inbound.getOrderId() == null || inbound.getOrderId() <= 0)
+        {
+            throw new ServiceException("请选择关联采购订单");
+        }
+        ErpPurchaseOrder order = purchaseOrderMapper.selectErpPurchaseOrderById(inbound.getOrderId());
+        if (order == null)
+        {
+            throw new ServiceException("关联采购订单不存在");
+        }
+        if (!"2".equals(order.getStatus()) && !"4".equals(order.getStatus()))
+        {
+            throw new ServiceException("只能关联审核通过或已完成的采购订单");
+        }
+        inbound.setSupplierId(order.getSupplierId());
+        inbound.setTotalAmount(order.getTotalAmount());
+    }
+
+    /**
+     * 当前入库单没有明细行，只支持整单入库，因此同一采购订单只能创建一张入库单。
+     */
+    private void validateOrderNotInbound(ErpPurchaseInbound inbound)
+    {
+        ErpPurchaseInbound query = new ErpPurchaseInbound();
+        query.setOrderId(inbound.getOrderId());
+        List<ErpPurchaseInbound> exists = purchaseInboundMapper.selectErpPurchaseInboundList(query);
+        for (ErpPurchaseInbound item : exists)
+        {
+            if (inbound.getInboundId() == null || !inbound.getInboundId().equals(item.getInboundId()))
+            {
+                throw new ServiceException("该采购订单已经关联入库单，不能重复入库");
+            }
+        }
     }
 
     /**
