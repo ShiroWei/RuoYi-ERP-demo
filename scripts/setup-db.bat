@@ -21,6 +21,8 @@ if errorlevel 1 goto :err
 if errorlevel 1 goto :err
 %MYSQL% --default-character-set=utf8mb4 ry-cloud < sql\ry_system_tools_fix_20260910.sql
 if errorlevel 1 goto :err
+%MYSQL% --default-character-set=utf8mb4 ry-cloud < sql\ry_erp_common_role_permissions_20260910.sql
+if errorlevel 1 goto :err
 
 echo [4/4] Importing Nacos config database (ry-config) ...
 %MYSQL% < sql\ry_config_20260611.sql
