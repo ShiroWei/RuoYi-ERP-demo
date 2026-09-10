@@ -19,6 +19,8 @@ echo [3/4] Importing ERP tables and report-center menus ...
 if errorlevel 1 goto :err
 %MYSQL% --default-character-set=utf8mb4 ry-cloud < sql\ry_erp_20260819.sql
 if errorlevel 1 goto :err
+%MYSQL% --default-character-set=utf8mb4 ry-cloud < sql\ry_system_tools_fix_20260910.sql
+if errorlevel 1 goto :err
 
 echo [4/4] Importing Nacos config database (ry-config) ...
 %MYSQL% < sql\ry_config_20260611.sql

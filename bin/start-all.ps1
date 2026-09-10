@@ -12,6 +12,9 @@ if ([string]::IsNullOrWhiteSpace($NacosHome)) { $NacosHome = 'D:\env\nacos-serve
 $services = @(
     [pscustomobject]@{ Name='auth'; Port=9200; Jar='ruoyi-auth\target\ruoyi-auth.jar'; Work='ruoyi-auth' },
     [pscustomobject]@{ Name='system'; Port=9201; Jar='ruoyi-modules\ruoyi-system\target\ruoyi-modules-system.jar'; Work='ruoyi-modules\ruoyi-system' },
+    [pscustomobject]@{ Name='gen'; Port=9202; Jar='ruoyi-modules\ruoyi-gen\target\ruoyi-modules-gen.jar'; Work='ruoyi-modules\ruoyi-gen' },
+    [pscustomobject]@{ Name='job'; Port=9203; Jar='ruoyi-modules\ruoyi-job\target\ruoyi-modules-job.jar'; Work='ruoyi-modules\ruoyi-job' },
+    [pscustomobject]@{ Name='monitor'; Port=9100; Jar='ruoyi-visual\ruoyi-monitor\target\ruoyi-visual-monitor.jar'; Work='ruoyi-visual\ruoyi-monitor' },
     [pscustomobject]@{ Name='erp-base'; Port=9217; Jar='ruoyi-modules\ruoyi-erp-base\target\ruoyi-modules-erp-base.jar'; Work='ruoyi-modules\ruoyi-erp-base' },
     [pscustomobject]@{ Name='erp-purchase'; Port=9218; Jar='ruoyi-modules\ruoyi-erp-purchase\target\ruoyi-modules-erp-purchase.jar'; Work='ruoyi-modules\ruoyi-erp-purchase' },
     [pscustomobject]@{ Name='erp-sale'; Port=9219; Jar='ruoyi-modules\ruoyi-erp-sale\target\ruoyi-modules-erp-sale.jar'; Work='ruoyi-modules\ruoyi-erp-sale' },
@@ -115,7 +118,7 @@ try {
     foreach ($service in $services | Where-Object { $_.Name -ne 'gateway' }) { Start-Jar $service }
     foreach ($service in $services | Where-Object { $_.Name -ne 'gateway' }) { Wait-Service $service }
 
-    # The gateway is shared with OA. Reuse it when running; start it only when free.
+    # Gateway/gen/job/monitor are shared with OA. Reuse them when running.
     $gateway = $services | Where-Object { $_.Name -eq 'gateway' }
     if (PortOpen 8000) {
         Warn 'Gateway port 8000 is already occupied; preserving the shared gateway/OA process.'
