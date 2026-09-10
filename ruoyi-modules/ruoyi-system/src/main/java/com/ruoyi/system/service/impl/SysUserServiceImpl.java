@@ -41,6 +41,8 @@ public class SysUserServiceImpl implements ISysUserService
 {
     private static final Logger log = LoggerFactory.getLogger(SysUserServiceImpl.class);
 
+    private static final String DEFAULT_ROLE_KEY = "common";
+
     @Autowired
     private SysUserMapper userMapper;
 
@@ -260,6 +262,7 @@ public class SysUserServiceImpl implements ISysUserService
     @Transactional(rollbackFor = Exception.class)
     public int insertUser(SysUser user)
     {
+        setDefaultRoleIfNecessary(user);
         // 新增用户信息
         int rows = userMapper.insertUser(user);
         // 新增用户岗位关联
@@ -276,9 +279,13 @@ public class SysUserServiceImpl implements ISysUserService
      * @return 结果
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean registerUser(SysUser user)
     {
-        return userMapper.insertUser(user) > 0;
+        setDefaultRoleIfNecessary(user);
+        int rows = userMapper.insertUser(user);
+        insertUserRole(user);
+        return rows > 0;
     }
 
     /**
@@ -401,6 +408,25 @@ public class SysUserServiceImpl implements ISysUserService
     }
 
     /**
+     * 未指定角色时分配默认 ERP 普通用户角色
+     *
+     * @param user 用户对象
+     */
+    private void setDefaultRoleIfNecessary(SysUser user)
+    {
+        if (StringUtils.isNotEmpty(user.getRoleIds()))
+        {
+            return;
+        }
+        SysRole defaultRole = roleMapper.checkRoleKeyUnique(DEFAULT_ROLE_KEY);
+        if (StringUtils.isNull(defaultRole) || !UserConstants.ROLE_NORMAL.equals(defaultRole.getStatus()))
+        {
+            throw new ServiceException("默认普通用户角色不存在或已停用，请联系管理员");
+        }
+        user.setRoleIds(new Long[] { defaultRole.getRoleId() });
+    }
+
+    /**
      * 新增用户岗位信息
      * 
      * @param user 用户对象
@@ -517,7 +543,7 @@ public class SysUserServiceImpl implements ISysUserService
                     String password = configService.selectConfigByKey("sys.user.initPassword");
                     user.setPassword(SecurityUtils.encryptPassword(password));
                     user.setCreateBy(operName);
-                    userMapper.insertUser(user);
+                    SpringUtils.getAopProxy(this).insertUser(user);
                     successNum++;
                     successMsg.append("<br/>" + successNum + "、账号 " + user.getUserName() + " 导入成功");
                 }
