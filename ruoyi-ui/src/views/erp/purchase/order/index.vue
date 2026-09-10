@@ -66,7 +66,7 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
-    <el-table v-loading="loading" :data="orderList" @selection-change="handleSelectionChange">
+    <el-table v-loading="loading" :data="orderList" @selection-change="handleSelectionChange" @expand-change="handleExpandChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column type="expand">
         <template slot-scope="props">
@@ -420,8 +420,19 @@ export default {
     },
     /** 明细按钮操作 */
     handleDetail(row) {
-      this.detail = row
-      this.openDetail = true
+      getPurchaseOrder(row.orderId).then(response => {
+        this.detail = response.data
+        this.openDetail = true
+      })
+    },
+    /** 展开行时按需加载订单明细 */
+    handleExpandChange(row, expandedRows) {
+      if (expandedRows.includes(row) && !row.itemsLoaded) {
+        getPurchaseOrder(row.orderId).then(response => {
+          this.$set(row, 'items', response.data.items || [])
+          this.$set(row, 'itemsLoaded', true)
+        })
+      }
     },
     /** 提交审核 */
     handleSubmit(row) {
