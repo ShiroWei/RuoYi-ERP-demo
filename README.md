@@ -123,7 +123,7 @@ flowchart LR
 **一键脚本**（Windows）：
 
 1. 初始化数据库：`scripts\setup-db.bat`（自动建库并导入全部 SQL）。
-2. 启动全栈：`scripts\start-all.bat`（Nacos + Redis + 后端微服务 + 前端）。
+2. 启动全栈：`bin\start-all.bat`（Nacos + Redis + 后端微服务 + 前端）。
 3. 停止服务：`scripts\stop-all.bat`。
 
 手动方式：
@@ -153,7 +153,8 @@ ruoyi-modules-erp-finance/ # ERP 财务（9221）
 ruoyi-modules-erp-production/ # ERP 生产（9222）
 ruoyi-modules-erp-report/  # ERP 报表 + 工作台待办（9223）
 sql/                       # 数据库脚本（含 ERP 业务表/菜单/字典/报表中心/演示种子数据）
-scripts/                   # 一键脚本（setup-db / start-all / stop-all）
+bin/                       # 构建、分服务启动及全栈启动脚本
+scripts/                   # 数据库初始化与停服脚本（setup-db / stop-all）
 docs/                      # 本地开发环境配置文档 + 界面截图
 ```
 
