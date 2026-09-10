@@ -158,14 +158,24 @@
     <!-- 添加或修改销售退货单对话框 -->
     <el-dialog :title="title" :visible.sync="open" width="860px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="90px">
+        <el-form-item label="来源出库单" prop="orderId">
+          <el-select v-model="form.orderId" placeholder="请选择已完成的销售出库单" filterable style="width: 100%" @change="outboundChange">
+            <el-option v-for="item in outboundOptions" :key="item.outboundId" :label="item.outboundNo + ' / ' + item.orderNo + ' / ' + item.customerName + ' / ' + item.warehouseName" :value="item.orderId" />
+          </el-select>
+        </el-form-item>
         <el-row>
           <el-col :span="12">
             <el-form-item label="客户" prop="customerName">
-              <el-select v-model="form.customerName" placeholder="请选择客户" filterable style="width: 100%" @change="customerChange">
-                <el-option v-for="item in customerOptions" :key="item.customerId" :label="item.customerName" :value="item.customerName" />
-              </el-select>
+              <el-input v-model="form.customerName" disabled placeholder="选择来源出库单后自动回填" />
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="退货仓库" prop="warehouseName">
+              <el-input v-model="form.warehouseName" disabled placeholder="选择来源出库单后自动回填" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
           <el-col :span="12">
             <el-form-item label="退货日期" prop="returnDate">
               <el-date-picker v-model="form.returnDate" type="date" value-format="yyyy-MM-dd" placeholder="选择日期" style="width: 100%" />
@@ -175,14 +185,12 @@
         <el-row>
           <el-col :span="12">
             <el-form-item label="退货金额(元)" prop="totalAmount">
-              <el-input-number v-model="form.totalAmount" :min="0" :precision="2" :controls="false" style="width: 100%" />
+              <el-input-number v-model="form.totalAmount" :min="0" :precision="2" :controls="false" disabled style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单据状态" prop="status">
-              <el-select v-model="form.status" placeholder="单据状态" style="width: 100%">
-                <el-option v-for="dict in billStatusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
-              </el-select>
+            <el-form-item label="关联订单">
+              <el-input v-model="form.orderNo" disabled />
             </el-form-item>
           </el-col>
         </el-row>
@@ -203,7 +211,9 @@
     <el-dialog title="销售退货单明细" :visible.sync="openDetail" width="760px" append-to-body>
       <el-descriptions :column="2" border size="small">
         <el-descriptions-item label="退货单号">{{ detail.returnNo }}</el-descriptions-item>
+        <el-descriptions-item label="关联订单">{{ detail.orderNo }}</el-descriptions-item>
         <el-descriptions-item label="客户">{{ detail.customerName }}</el-descriptions-item>
+        <el-descriptions-item label="退货仓库">{{ detail.warehouseName }}</el-descriptions-item>
         <el-descriptions-item label="退货日期">{{ detail.returnDate }}</el-descriptions-item>
         <el-descriptions-item label="单据状态">
           <dict-tag :options="billStatusOptions" :value="detail.status"/>
@@ -217,8 +227,7 @@
 </template>
 
 <script>
-import { listSaleReturn, getSaleReturn, delSaleReturn, addSaleReturn, updateSaleReturn, submitSaleReturn, approveSaleReturn, rejectSaleReturn, completeSaleReturn } from "@/api/erp/sale"
-import { listCustomer } from "@/api/erp/base"
+import { listSaleOutbound, listSaleReturn, getSaleReturn, delSaleReturn, addSaleReturn, updateSaleReturn, submitSaleReturn, approveSaleReturn, rejectSaleReturn, completeSaleReturn } from "@/api/erp/sale"
 
 export default {
   name: "SaleReturn",
@@ -255,8 +264,8 @@ export default {
         { value: '3', label: '已驳回', tagType: 'danger' },
         { value: '4', label: '已完成', tagType: 'success' }
       ],
-      // 客户选项（接入真实接口后动态加载）
-      customerOptions: [],
+      // 可退货的已完成销售出库单
+      outboundOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -269,33 +278,45 @@ export default {
       form: {},
       // 表单校验
       rules: {
+        orderId: [
+          { required: true, message: "来源出库单不能为空", trigger: "change" }
+        ],
         customerName: [
           { required: true, message: "客户不能为空", trigger: "change" }
         ],
         returnDate: [
           { required: true, message: "退货日期不能为空", trigger: "change" }
         ],
-        status: [
-          { required: true, message: "单据状态不能为空", trigger: "change" }
-        ]
       }
     }
   },
   created() {
     this.getList()
-    this.loadCustomer()
+    this.loadOutbound()
   },
   methods: {
-    /** 加载客户下拉 */
-    loadCustomer() {
-      listCustomer({ pageNum: 1, pageSize: 100 }).then(response => {
-        this.customerOptions = response.rows
+    /** 加载可退货的已完成出库单 */
+    loadOutbound() {
+      Promise.all([
+        listSaleOutbound({ pageNum: 1, pageSize: 100, status: '4' }),
+        listSaleReturn({ pageNum: 1, pageSize: 100 })
+      ]).then(([outbound, returned]) => {
+        const used = new Set((returned.rows || []).map(item => item.orderId))
+        this.outboundOptions = (outbound.rows || [])
+          .filter(item => !used.has(item.orderId) || item.orderId === this.form.orderId)
       })
     },
-    /** 选择客户回填 id */
-    customerChange() {
-      const c = this.customerOptions.find(item => item.customerName === this.form.customerName)
-      this.form.customerId = c ? c.customerId : undefined
+    /** 选择来源出库单后回填退货上下文 */
+    outboundChange(orderId) {
+      const outbound = this.outboundOptions.find(item => item.orderId === orderId)
+      if (outbound) {
+        this.form.orderNo = outbound.orderNo
+        this.form.customerId = outbound.customerId
+        this.form.customerName = outbound.customerName
+        this.form.warehouseId = outbound.warehouseId
+        this.form.warehouseName = outbound.warehouseName
+        this.form.totalAmount = outbound.totalAmount
+      }
     },
     /** 查询退货单列表 */
     getList() {
@@ -320,6 +341,8 @@ export default {
         orderNo: undefined,
         customerName: undefined,
         customerId: undefined,
+        warehouseName: undefined,
+        warehouseId: undefined,
         returnDate: undefined,
         status: "0",
         reason: undefined,
@@ -356,6 +379,19 @@ export default {
       const returnId = row.returnId || this.ids
       getSaleReturn(returnId).then(response => {
         this.form = response.data
+        if (!this.outboundOptions.some(item => item.orderId === this.form.orderId)) {
+          this.outboundOptions.push({
+            outboundId: this.form.returnId,
+            outboundNo: '已关联',
+            orderId: this.form.orderId,
+            orderNo: this.form.orderNo,
+            customerId: this.form.customerId,
+            customerName: this.form.customerName,
+            warehouseId: this.form.warehouseId,
+            warehouseName: this.form.warehouseName,
+            totalAmount: this.form.totalAmount
+          })
+        }
         this.open = true
         this.title = "修改销售退货单"
       })

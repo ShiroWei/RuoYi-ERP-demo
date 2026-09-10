@@ -7,10 +7,14 @@ import com.ruoyi.common.core.exception.ServiceException;
 import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.erp.sale.domain.ErpSaleOrderItem;
+import com.ruoyi.erp.sale.domain.ErpSaleOutbound;
+import com.ruoyi.erp.sale.domain.ErpSaleOrder;
 import com.ruoyi.erp.sale.domain.ErpSaleReturn;
 import com.ruoyi.erp.sale.feign.StockAdjustReq;
 import com.ruoyi.erp.sale.feign.StockFeignClient;
 import com.ruoyi.erp.sale.mapper.ErpSaleOrderItemMapper;
+import com.ruoyi.erp.sale.mapper.ErpSaleOutboundMapper;
+import com.ruoyi.erp.sale.mapper.ErpSaleOrderMapper;
 import com.ruoyi.erp.sale.mapper.ErpSaleReturnMapper;
 import com.ruoyi.erp.sale.service.IErpSaleReturnService;
 
@@ -27,6 +31,12 @@ public class ErpSaleReturnServiceImpl implements IErpSaleReturnService
 
     @Autowired
     private ErpSaleOrderItemMapper saleOrderItemMapper;
+
+    @Autowired
+    private ErpSaleOutboundMapper saleOutboundMapper;
+
+    @Autowired
+    private ErpSaleOrderMapper saleOrderMapper;
 
     @Autowired
     private StockFeignClient stockFeignClient;
@@ -55,6 +65,8 @@ public class ErpSaleReturnServiceImpl implements IErpSaleReturnService
     @Override
     public int insertErpSaleReturn(ErpSaleReturn ErpSaleReturn)
     {
+        fillAndValidateSource(ErpSaleReturn);
+        validateOrderNotReturned(ErpSaleReturn);
         ErpSaleReturn.setReturnNo(generateReturnNo());
         ErpSaleReturn.setStatus("0");
         ErpSaleReturn.setCreateBy(SecurityUtils.getUsername());
@@ -68,9 +80,46 @@ public class ErpSaleReturnServiceImpl implements IErpSaleReturnService
     @Override
     public int updateErpSaleReturn(ErpSaleReturn ErpSaleReturn)
     {
+        fillAndValidateSource(ErpSaleReturn);
+        validateOrderNotReturned(ErpSaleReturn);
         ErpSaleReturn.setUpdateBy(SecurityUtils.getUsername());
         ErpSaleReturn.setUpdateTime(DateUtils.getNowDate());
         return saleReturnMapper.updateErpSaleReturn(ErpSaleReturn);
+    }
+
+    private void fillAndValidateSource(ErpSaleReturn returnOrder)
+    {
+        if (returnOrder.getOrderId() == null || returnOrder.getOrderId() <= 0)
+        {
+            throw new ServiceException("请选择来源销售出库单");
+        }
+        ErpSaleOutbound query = new ErpSaleOutbound();
+        query.setOrderId(returnOrder.getOrderId());
+        query.setStatus("4");
+        List<ErpSaleOutbound> outbounds = saleOutboundMapper.selectErpSaleOutboundList(query);
+        if (outbounds == null || outbounds.isEmpty())
+        {
+            throw new ServiceException("关联销售订单尚未完成出库，不能退货");
+        }
+        ErpSaleOrder order = saleOrderMapper.selectErpSaleOrderById(returnOrder.getOrderId());
+        ErpSaleOutbound outbound = outbounds.get(0);
+        returnOrder.setCustomerId(order.getCustomerId());
+        returnOrder.setWarehouseId(outbound.getWarehouseId());
+        returnOrder.setTotalAmount(outbound.getTotalAmount());
+    }
+
+    private void validateOrderNotReturned(ErpSaleReturn returnOrder)
+    {
+        ErpSaleReturn query = new ErpSaleReturn();
+        query.setOrderId(returnOrder.getOrderId());
+        List<ErpSaleReturn> exists = saleReturnMapper.selectErpSaleReturnList(query);
+        for (ErpSaleReturn item : exists)
+        {
+            if (returnOrder.getReturnId() == null || !returnOrder.getReturnId().equals(item.getReturnId()))
+            {
+                throw new ServiceException("该销售订单已经关联退货单，不能重复退货");
+            }
+        }
     }
 
     /**
