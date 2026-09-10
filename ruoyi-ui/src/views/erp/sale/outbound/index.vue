@@ -159,12 +159,15 @@
     <!-- 添加或修改销售出库单对话框 -->
     <el-dialog :title="title" :visible.sync="open" width="860px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="90px">
+        <el-form-item label="关联订单" prop="orderId">
+          <el-select v-model="form.orderId" placeholder="请选择已审核的销售订单" filterable style="width: 100%" @change="orderChange">
+            <el-option v-for="item in orderOptions" :key="item.orderId" :label="item.orderNo + ' / ' + item.customerName + ' / ' + item.totalAmount + ' 元'" :value="item.orderId" />
+          </el-select>
+        </el-form-item>
         <el-row>
           <el-col :span="12">
             <el-form-item label="客户" prop="customerName">
-              <el-select v-model="form.customerName" placeholder="请选择客户" filterable style="width: 100%" @change="customerChange">
-                <el-option v-for="item in customerOptions" :key="item.customerId" :label="item.customerName" :value="item.customerName" />
-              </el-select>
+              <el-input v-model="form.customerName" disabled placeholder="选择订单后自动回填" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -183,15 +186,10 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="出库金额(元)" prop="totalAmount">
-              <el-input-number v-model="form.totalAmount" :min="0" :precision="2" :controls="false" style="width: 100%" />
+              <el-input-number v-model="form.totalAmount" :min="0" :precision="2" :controls="false" disabled style="width: 100%" />
             </el-form-item>
           </el-col>
         </el-row>
-        <el-form-item label="单据状态" prop="status">
-          <el-select v-model="form.status" placeholder="单据状态" style="width: 100%">
-            <el-option v-for="dict in billStatusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
         </el-form-item>
@@ -206,6 +204,7 @@
     <el-dialog title="销售出库单明细" :visible.sync="openDetail" width="760px" append-to-body>
       <el-descriptions :column="2" border size="small">
         <el-descriptions-item label="出库单号">{{ detail.outboundNo }}</el-descriptions-item>
+        <el-descriptions-item label="关联订单">{{ detail.orderNo }}</el-descriptions-item>
         <el-descriptions-item label="客户">{{ detail.customerName }}</el-descriptions-item>
         <el-descriptions-item label="出库仓库">{{ detail.warehouseName }}</el-descriptions-item>
         <el-descriptions-item label="出库日期">{{ detail.outboundDate }}</el-descriptions-item>
@@ -219,8 +218,8 @@
 </template>
 
 <script>
-import { listSaleOutbound, getSaleOutbound, delSaleOutbound, addSaleOutbound, updateSaleOutbound, submitSaleOutbound, approveSaleOutbound, rejectSaleOutbound, completeSaleOutbound } from "@/api/erp/sale"
-import { listCustomer, listWarehouse } from "@/api/erp/base"
+import { listSaleOrder, listSaleOutbound, getSaleOutbound, delSaleOutbound, addSaleOutbound, updateSaleOutbound, submitSaleOutbound, approveSaleOutbound, rejectSaleOutbound, completeSaleOutbound } from "@/api/erp/sale"
+import { listWarehouse } from "@/api/erp/base"
 
 export default {
   name: "SaleOutbound",
@@ -257,8 +256,8 @@ export default {
         { value: '3', label: '已驳回', tagType: 'danger' },
         { value: '4', label: '已完成', tagType: 'success' }
       ],
-      // 客户选项（接入真实接口后动态加载）
-      customerOptions: [],
+      // 可关联的销售订单
+      orderOptions: [],
       // 仓库选项（接入真实接口后动态加载）
       warehouseOptions: [],
       // 查询参数
@@ -273,6 +272,9 @@ export default {
       form: {},
       // 表单校验
       rules: {
+        orderId: [
+          { required: true, message: "关联销售订单不能为空", trigger: "change" }
+        ],
         customerName: [
           { required: true, message: "客户不能为空", trigger: "change" }
         ],
@@ -282,34 +284,42 @@ export default {
         outboundDate: [
           { required: true, message: "出库日期不能为空", trigger: "change" }
         ],
-        status: [
-          { required: true, message: "单据状态不能为空", trigger: "change" }
-        ]
       }
     }
   },
   created() {
     this.getList()
-    this.loadCustomer()
     this.loadWarehouse()
+    this.loadOrder()
   },
   methods: {
-    /** 加载客户下拉 */
-    loadCustomer() {
-      listCustomer({ pageNum: 1, pageSize: 100 }).then(response => {
-        this.customerOptions = response.rows
-      })
-    },
     /** 加载仓库下拉 */
     loadWarehouse() {
       listWarehouse({ pageNum: 1, pageSize: 100 }).then(response => {
         this.warehouseOptions = response.rows
       })
     },
-    /** 选择客户回填 id */
-    customerChange() {
-      const c = this.customerOptions.find(item => item.customerName === this.form.customerName)
-      this.form.customerId = c ? c.customerId : undefined
+    /** 加载可关联销售订单 */
+    loadOrder() {
+      Promise.all([
+        listSaleOrder({ pageNum: 1, pageSize: 100, status: '2' }),
+        listSaleOrder({ pageNum: 1, pageSize: 100, status: '4' }),
+        listSaleOutbound({ pageNum: 1, pageSize: 100 })
+      ]).then(([approved, completed, outbound]) => {
+        const used = new Set((outbound.rows || []).map(item => item.orderId))
+        this.orderOptions = [...(approved.rows || []), ...(completed.rows || [])]
+          .filter(item => !used.has(item.orderId) || item.orderId === this.form.orderId)
+      })
+    },
+    /** 选择订单后回填客户和金额 */
+    orderChange(orderId) {
+      const order = this.orderOptions.find(item => item.orderId === orderId)
+      if (order) {
+        this.form.orderNo = order.orderNo
+        this.form.customerId = order.customerId
+        this.form.customerName = order.customerName
+        this.form.totalAmount = order.totalAmount
+      }
     },
     /** 选择仓库回填 id */
     warehouseChange() {
@@ -376,6 +386,15 @@ export default {
       const outboundId = row.outboundId || this.ids
       getSaleOutbound(outboundId).then(response => {
         this.form = response.data
+        if (!this.orderOptions.some(item => item.orderId === this.form.orderId)) {
+          this.orderOptions.push({
+            orderId: this.form.orderId,
+            orderNo: this.form.orderNo,
+            customerId: this.form.customerId,
+            customerName: this.form.customerName,
+            totalAmount: this.form.totalAmount
+          })
+        }
         this.open = true
         this.title = "修改销售出库单"
       })

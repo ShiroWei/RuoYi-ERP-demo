@@ -7,10 +7,12 @@ import com.ruoyi.common.core.exception.ServiceException;
 import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.security.utils.SecurityUtils;
 import com.ruoyi.erp.sale.domain.ErpSaleOrderItem;
+import com.ruoyi.erp.sale.domain.ErpSaleOrder;
 import com.ruoyi.erp.sale.domain.ErpSaleOutbound;
 import com.ruoyi.erp.sale.feign.StockAdjustReq;
 import com.ruoyi.erp.sale.feign.StockFeignClient;
 import com.ruoyi.erp.sale.mapper.ErpSaleOrderItemMapper;
+import com.ruoyi.erp.sale.mapper.ErpSaleOrderMapper;
 import com.ruoyi.erp.sale.mapper.ErpSaleOutboundMapper;
 import com.ruoyi.erp.sale.service.IErpSaleOutboundService;
 
@@ -27,6 +29,9 @@ public class ErpSaleOutboundServiceImpl implements IErpSaleOutboundService
 
     @Autowired
     private ErpSaleOrderItemMapper saleOrderItemMapper;
+
+    @Autowired
+    private ErpSaleOrderMapper saleOrderMapper;
 
     @Autowired
     private StockFeignClient stockFeignClient;
@@ -55,6 +60,8 @@ public class ErpSaleOutboundServiceImpl implements IErpSaleOutboundService
     @Override
     public int insertErpSaleOutbound(ErpSaleOutbound ErpSaleOutbound)
     {
+        fillAndValidateOrder(ErpSaleOutbound);
+        validateOrderNotOutbound(ErpSaleOutbound);
         ErpSaleOutbound.setOutboundNo(generateOutboundNo());
         ErpSaleOutbound.setStatus("0");
         ErpSaleOutbound.setCreateBy(SecurityUtils.getUsername());
@@ -68,9 +75,44 @@ public class ErpSaleOutboundServiceImpl implements IErpSaleOutboundService
     @Override
     public int updateErpSaleOutbound(ErpSaleOutbound ErpSaleOutbound)
     {
+        fillAndValidateOrder(ErpSaleOutbound);
+        validateOrderNotOutbound(ErpSaleOutbound);
         ErpSaleOutbound.setUpdateBy(SecurityUtils.getUsername());
         ErpSaleOutbound.setUpdateTime(DateUtils.getNowDate());
         return saleOutboundMapper.updateErpSaleOutbound(ErpSaleOutbound);
+    }
+
+    private void fillAndValidateOrder(ErpSaleOutbound outbound)
+    {
+        if (outbound.getOrderId() == null || outbound.getOrderId() <= 0)
+        {
+            throw new ServiceException("请选择关联销售订单");
+        }
+        ErpSaleOrder order = saleOrderMapper.selectErpSaleOrderById(outbound.getOrderId());
+        if (order == null)
+        {
+            throw new ServiceException("关联销售订单不存在");
+        }
+        if (!"2".equals(order.getStatus()) && !"4".equals(order.getStatus()))
+        {
+            throw new ServiceException("只能关联审核通过或已完成的销售订单");
+        }
+        outbound.setCustomerId(order.getCustomerId());
+        outbound.setTotalAmount(order.getTotalAmount());
+    }
+
+    private void validateOrderNotOutbound(ErpSaleOutbound outbound)
+    {
+        ErpSaleOutbound query = new ErpSaleOutbound();
+        query.setOrderId(outbound.getOrderId());
+        List<ErpSaleOutbound> exists = saleOutboundMapper.selectErpSaleOutboundList(query);
+        for (ErpSaleOutbound item : exists)
+        {
+            if (outbound.getOutboundId() == null || !outbound.getOutboundId().equals(item.getOutboundId()))
+            {
+                throw new ServiceException("该销售订单已经关联出库单，不能重复出库");
+            }
+        }
     }
 
     /**
