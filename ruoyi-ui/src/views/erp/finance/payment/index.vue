@@ -126,28 +126,32 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="往来单位" prop="partnerName">
-              <el-select v-model="form.partnerName" placeholder="请选择往来单位" filterable style="width: 100%" @change="partnerChange">
-                <el-option v-for="item in partnerOptions" :key="item.partnerId" :label="item.partnerName" :value="item.partnerName" />
+            <el-form-item label="关联单据" prop="billNo">
+              <el-select v-model="form.billNo" placeholder="请选择未结清单据" filterable style="width: 100%" @change="billChange">
+                <el-option v-for="item in billOptions" :key="item.billNo" :label="item.billNo + ' / ' + item.partnerName + ' / 未结 ' + item.balance + ' 元'" :value="item.billNo" />
               </el-select>
             </el-form-item>
           </el-col>
         </el-row>
         <el-row>
           <el-col :span="12">
-            <el-form-item label="金额" prop="amount">
-              <el-input-number v-model="form.amount" :min="0" :precision="2" :controls="false" style="width: 100%" placeholder="金额" />
+            <el-form-item label="往来单位" prop="partnerName">
+              <el-input v-model="form.partnerName" disabled />
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="金额" prop="amount">
+              <el-input-number v-model="form.amount" :min="0" :max="form.maxAmount || 0" :precision="2" :controls="false" style="width: 100%" placeholder="金额" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
           <el-col :span="12">
             <el-form-item label="收付款日期" prop="paymentDate">
               <el-date-picker v-model="form.paymentDate" type="date" value-format="yyyy-MM-dd" placeholder="选择日期" style="width: 100%" />
             </el-form-item>
           </el-col>
         </el-row>
-        <el-form-item label="关联单据" prop="billNo">
-          <el-input v-model="form.billNo" placeholder="请输入关联单据号" />
-        </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
         </el-form-item>
@@ -161,8 +165,7 @@
 </template>
 
 <script>
-import { listPayment, addPayment, submitPayment, approvePayment, rejectPayment, completePayment } from "@/api/erp/finance"
-import { listCustomer, listSupplier } from "@/api/erp/base"
+import { listReceivable, listPayable, listPayment, addPayment, submitPayment, approvePayment, rejectPayment, completePayment } from "@/api/erp/finance"
 
 export default {
   name: "FinancePayment",
@@ -194,8 +197,8 @@ export default {
         { value: '3', label: '已驳回', tagType: 'danger' },
         { value: '4', label: '已完成', tagType: 'success' }
       ],
-      // 往来单位选项（按收付款类型动态加载）
-      partnerOptions: [],
+      // 可关联的未结清应收/应付单
+      billOptions: [],
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -211,6 +214,9 @@ export default {
         paymentType: [
           { required: true, message: "收付款类型不能为空", trigger: "change" }
         ],
+        billNo: [
+          { required: true, message: "关联单据不能为空", trigger: "change" }
+        ],
         partnerName: [
           { required: true, message: "往来单位不能为空", trigger: "change" }
         ],
@@ -225,16 +231,21 @@ export default {
   },
   created() {
     this.getList()
-    this.loadPartners('1')
+    this.loadBills('1')
   },
   methods: {
-    /** 按收付款类型加载往来单位：1收款->客户，2付款->供应商 */
-    loadPartners(paymentType) {
-      const api = paymentType === '1' ? listCustomer : listSupplier
-      api({ pageNum: 1, pageSize: 100 }).then(response => {
-        this.partnerOptions = response.rows.map(item => ({
+    /** 按类型加载未结清台账：1收款->应收，2付款->应付 */
+    loadBills(paymentType) {
+      const api = paymentType === '1' ? listReceivable : listPayable
+      Promise.all([
+        api({ pageNum: 1, pageSize: 100, status: '0' }),
+        api({ pageNum: 1, pageSize: 100, status: '1' })
+      ]).then(([unsettled, partial]) => {
+        this.billOptions = [...(unsettled.rows || []), ...(partial.rows || [])].map(item => ({
+          billNo: item.billNo,
           partnerId: item.customerId || item.supplierId,
-          partnerName: item.customerName || item.supplierName
+          partnerName: item.customerName || item.supplierName,
+          balance: item.balance
         }))
       })
     },
@@ -242,14 +253,22 @@ export default {
     paymentTypeChange() {
       this.form.partnerName = undefined
       this.form.partnerId = undefined
-      this.form.partnerType = undefined
-      this.loadPartners(this.form.paymentType)
-    },
-    /** 选择往来单位回填 id/type */
-    partnerChange() {
-      const p = this.partnerOptions.find(item => item.partnerName === this.form.partnerName)
-      this.form.partnerId = p ? p.partnerId : undefined
       this.form.partnerType = this.form.paymentType === '1' ? '客户' : '供应商'
+      this.form.billNo = undefined
+      this.form.amount = undefined
+      this.form.maxAmount = undefined
+      this.loadBills(this.form.paymentType)
+    },
+    /** 选择台账后回填往来单位和未结金额 */
+    billChange(billNo) {
+      const bill = this.billOptions.find(item => item.billNo === billNo)
+      if (bill) {
+        this.form.partnerId = bill.partnerId
+        this.form.partnerName = bill.partnerName
+        this.form.partnerType = this.form.paymentType === '1' ? '客户' : '供应商'
+        this.form.amount = bill.balance
+        this.form.maxAmount = bill.balance
+      }
     },
     /** 查询收付款列表 */
     getList() {
@@ -277,6 +296,7 @@ export default {
         billNo: undefined,
         paymentDate: undefined,
         amount: undefined,
+        maxAmount: undefined,
         status: '0',
         remark: undefined
       }
